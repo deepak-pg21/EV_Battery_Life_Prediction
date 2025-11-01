@@ -1,6 +1,5 @@
-numpy
-pandas
-scikit-learn
-matplotlib
-python-docx
 streamlit
+pandas
+numpy
+scikit-learn
+joblib

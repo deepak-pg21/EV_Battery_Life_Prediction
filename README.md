@@ -1,48 +1,47 @@
-# EV_Battery_Life_Prediction
+# 🔋 EV Battery Life Prediction
 
-**Predicting the Remaining Battery Life and Degradation Rate of Electric Vehicles using Machine Learning**
+## Overview
+This project predicts the **remaining battery life** and **degradation rate** of Electric Vehicles (EVs) using **Machine Learning**.
 
-## Project Overview
-This repository contains a professional, week-by-week project for predicting the remaining useful life (RUL) and degradation rate of EV batteries. It includes data, reports, and starter code for preprocessing and building ML models.
+### 🚀 Features
+- Machine Learning model trained on EV IoT predictive maintenance dataset.
+- Interactive **Streamlit app** for predictions.
+- Modular structure for future updates (Deep Learning, Reinforcement Learning, etc.)
 
-## Structure
+### 📁 Project Structure
 ```
 EV_Battery_Life_Prediction/
 │
-├── README.md
-├── requirements.txt
-├── Week_1/
-│   ├── Docs/Report_Week1.md
-│   └── Code/main_week1.py
+├── model/
+│   └── ev_battery_model.pkl
 │
-├── Week_2/
-│   ├── Docs/Report_Week2.md
-│   └── Code/main_week2.py
+├── notebooks/
+│   └── train_model.ipynb
 │
-└── dataset/
-    └── ev_battery_data_sample.csv
+├── app.py
+└── README.md
 ```
 
-## Quick start
-1. Clone or download this repository.
-2. Create a virtual environment and install dependencies:
-```bash
-python -m venv venv
-source venv/bin/activate   # Windows: venv\Scripts\activate
-pip install -r requirements.txt
+### 🧠 How to Run
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/<your-username>/EV_Battery_Life_Prediction.git
+   ```
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. Run the app:
+   ```bash
+   streamlit run app.py
+   ```
+
+### 📊 Dataset
+Use the Kaggle dataset:
 ```
-3. Explore `Week_1/Docs/Report_Week1.md` and `Week_2/Docs/Report_Week2.md`.
-4. Run preprocessing code:
-```bash
-python Week_2/Code/main_week2.py
-```
-5. Launch Streamlit demo (Week 1 placeholder UI):
-```bash
-streamlit run Week_1/Code/main_week1.py
+datasetengineer/eviot-predictivemaint-dataset
 ```
 
-## Author
-P.G. Deepak Chiranjeevi
-
-## License
-MIT
+### 💡 Future Work
+- Integrate **Generative AI chatbot** for EV reports.
+- Add **real-time IoT sensor integration**.

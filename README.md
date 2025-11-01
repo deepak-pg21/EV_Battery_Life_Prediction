@@ -1,47 +1,15 @@
-# 🔋 EV Battery Life Prediction
+# EV_Battery_Life_Prediction (Advanced)
 
-## Overview
-This project predicts the **remaining battery life** and **degradation rate** of Electric Vehicles (EVs) using **Machine Learning**.
+Predict remaining battery charge cycles, estimate battery health percentage, and visualize degradation trends.
 
-### 🚀 Features
-- Machine Learning model trained on EV IoT predictive maintenance dataset.
-- Interactive **Streamlit app** for predictions.
-- Modular structure for future updates (Deep Learning, Reinforcement Learning, etc.)
+## How to run locally
 
-### 📁 Project Structure
-```
-EV_Battery_Life_Prediction/
-│
-├── model/
-│   └── ev_battery_model.pkl
-│
-├── notebooks/
-│   └── train_model.ipynb
-│
-├── app.py
-└── README.md
-```
-
-### 🧠 How to Run
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/<your-username>/EV_Battery_Life_Prediction.git
-   ```
-2. Install dependencies:
-   ```bash
+1. Install dependencies:
    pip install -r requirements.txt
-   ```
-3. Run the app:
-   ```bash
-   streamlit run app.py
-   ```
 
-### 📊 Dataset
-Use the Kaggle dataset:
-```
-datasetengineer/eviot-predictivemaint-dataset
-```
+2. Run Streamlit app:
+   streamlit run app/app.py
 
-### 💡 Future Work
-- Integrate **Generative AI chatbot** for EV reports.
-- Add **real-time IoT sensor integration**.
+## Notes
+- The included model is trained on a small synthetic sample for demo purposes.
+- To use the full dataset, place it in `data/` and run `python model/train_model.py`.

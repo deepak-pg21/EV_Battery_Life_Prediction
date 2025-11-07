@@ -1,15 +1,13 @@
-# EV_Battery_Life_Prediction (Advanced)
+# EV_Insight — Final Package (Green Theme)
 
-Predict remaining battery charge cycles, estimate battery health percentage, and visualize degradation trends.
+EV_Insight predicts EV battery remaining charge cycles, estimates replacement cost, and provides a battery health index.
+Files included:
+- app/app.py : Streamlit app
+- data/merged_ev_data.csv : merged demo dataset (or copied uploaded file)
+- model/* : trained models (ev_life_model.pkl, ev_cost_model.pkl, ev_health_model.pkl)
+- model/train_models.py : script to retrain models
+- requirements.txt
+- README.md
 
-## How to run locally
-
-1. Install dependencies:
-   pip install -r requirements.txt
-
-2. Run Streamlit app:
-   streamlit run app/app.py
-
-## Notes
-- The included model is trained on a small synthetic sample for demo purposes.
-- To use the full dataset, place it in `data/` and run `python model/train_model.py`.
+Weeks summary included in project documentation.
+Author: P.G. Deepak Chiranjeevi

@@ -1,29 +1,82 @@
 #!/usr/bin/env python3
 """
-EV Insight: Unified Model Training Script
-Trains battery life, cost, and health prediction models using merged_ev_data.csv
+EV Insight: Robust Unified Model Training Script
+Tries multiple data locations, creates folders if missing, logs metrics.
 """
 
 import os
+import sys
 import pandas as pd
 import joblib
+from datetime import datetime
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, r2_score
 
 # -------------------------
-# Locate dataset
+# Helper: find dataset in likely locations
 # -------------------------
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_PATH = os.path.join(BASE_DIR, '..', 'data', 'merged_ev_data.csv')
-MODEL_DIR = os.path.join(BASE_DIR, '..', 'model')
+def find_dataset(filename="merged_ev_data.csv"):
+    # folder where this script sits
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        os.path.join(script_dir, "data", filename),            # <project>/data/merged_ev_data.csv
+        os.path.join(script_dir, filename),                    # <project>/merged_ev_data.csv
+        os.path.join(script_dir, "..", "data", filename),      # <project>/../data/merged_ev_data.csv
+        os.path.join(script_dir, "..", filename),              # <project>/../merged_ev_data.csv
+    ]
+    # make absolute and dedupe
+    seen = set()
+    final = []
+    for p in candidates:
+        ap = os.path.abspath(p)
+        if ap not in seen:
+            seen.add(ap)
+            final.append(ap)
+    for p in final:
+        if os.path.exists(p):
+            return p
+    return final  # return list of tried paths if not found
 
+# -------------------------
+# Setup folders
+# -------------------------
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = SCRIPT_DIR  # user is running script from repo root
+DATA_DIR = os.path.join(PROJECT_ROOT, "data")
+MODEL_DIR = os.path.join(PROJECT_ROOT, "model")
+LOG_PATH = os.path.join(MODEL_DIR, "train_log.txt")
+
+os.makedirs(DATA_DIR, exist_ok=True)
 os.makedirs(MODEL_DIR, exist_ok=True)
 
-print(f"Loading dataset from: {DATA_PATH}")
-df = pd.read_csv(DATA_PATH)
+print("Looking for dataset `merged_ev_data.csv`...")
+found = find_dataset("merged_ev_data.csv")
+if isinstance(found, str):
+    DATA_PATH = found
+    print("Found dataset at:", DATA_PATH)
+else:
+    print("Could not find merged_ev_data.csv in the usual locations.")
+    print("Paths tried:")
+    for p in found:
+        print("  -", p)
+    print("\n➡️ Please place your dataset file named exactly `merged_ev_data.csv` into one of these folders:")
+    print("   -", os.path.join(PROJECT_ROOT, "data"))
+    print("   -", PROJECT_ROOT)
+    print("\nExample (Windows CMD):")
+    print(r'  move "C:\path\to\your\merged_ev_data.csv" "%cd%\data\"')
+    sys.exit(1)
 
-# Ensure key columns exist
+# -------------------------
+# Load dataset
+# -------------------------
+print("Loading dataset...")
+df = pd.read_csv(DATA_PATH)
+print("Rows:", len(df), "Columns:", len(df.columns))
+
+# -------------------------
+# Required columns check
+# -------------------------
 required_cols = [
     'battery_temperature','voltage','current','state_of_charge',
     'avg_current','state_of_health','mileage_km','age_months',
@@ -31,61 +84,42 @@ required_cols = [
 ]
 missing = [c for c in required_cols if c not in df.columns]
 if missing:
-    raise ValueError(f"Missing required columns: {missing}")
+    print("ERROR: dataset is missing required columns:")
+    for m in missing:
+        print(" -", m)
+    print("\nYou can either add these columns to the CSV or rename your CSV columns accordingly.")
+    sys.exit(1)
 
-# -------------------------
-# Define features & targets
-# -------------------------
 features = [
     'battery_temperature','voltage','current','state_of_charge',
     'avg_current','state_of_health','mileage_km','age_months'
 ]
 
 # -------------------------
-# Model 1: Predict Life (Charge Cycles)
+# Model 1: Battery Life
 # -------------------------
-print("\nTraining Battery Life Model...")
+print("\n[1/3] Training Battery Life Model (charge_cycles)...")
 X = df[features]
 y_life = df['charge_cycles']
 
 X_train, X_test, y_train, y_test = train_test_split(X, y_life, test_size=0.2, random_state=42)
 life_model = RandomForestRegressor(n_estimators=120, max_depth=10, random_state=42)
 life_model.fit(X_train, y_train)
-
 life_preds = life_model.predict(X_test)
-print(f"Life Model → MAE: {mean_absolute_error(y_test, life_preds):.2f} | R²: {r2_score(y_test, life_preds):.3f}")
-
+life_mae = mean_absolute_error(y_test, life_preds)
+life_r2 = r2_score(y_test, life_preds)
 joblib.dump(life_model, os.path.join(MODEL_DIR, 'ev_life_model.pkl'))
+print(f" - Life MAE: {life_mae:.3f}, R2: {life_r2:.3f}")
 
 # -------------------------
-# Model 2: Predict Cost (Replacement Cost)
+# Model 2: Battery Cost
 # -------------------------
-print("\nTraining Battery Cost Model...")
+print("\n[2/3] Training Battery Cost Model (battery_replacement_cost)...")
 y_cost = df['battery_replacement_cost']
-
 X_train, X_test, y_train, y_test = train_test_split(X, y_cost, test_size=0.2, random_state=42)
 cost_model = RandomForestRegressor(n_estimators=120, max_depth=10, random_state=42)
 cost_model.fit(X_train, y_train)
-
 cost_preds = cost_model.predict(X_test)
-print(f"Cost Model → MAE: {mean_absolute_error(y_test, cost_preds):.2f} | R²: {r2_score(y_test, cost_preds):.3f}")
-
-joblib.dump(cost_model, os.path.join(MODEL_DIR, 'ev_cost_model.pkl'))
-
-# -------------------------
-# Model 3: Predict Health Index (Hybrid)
-# -------------------------
-print("\nTraining Battery Health Model...")
-merged = X.copy()
-merged['pred_cycles'] = life_model.predict(X)
-merged['pred_cost'] = cost_model.predict(X)
-
-# Health target derived from state_of_health and predicted cycles
-hybrid_target = (df['state_of_health'] * 0.6 + merged['pred_cycles'] / 40).clip(0, 100)
-
-health_model = RandomForestRegressor(n_estimators=80, max_depth=8, random_state=42)
-health_model.fit(merged[['pred_cycles','pred_cost','state_of_health']], hybrid_target)
-
-joblib.dump(health_model, os.path.join(MODEL_DIR, 'ev_health_model.pkl'))
-
-print("\n✅ All models trained and saved successfully in /model/")
+cost_mae = mean_absolute_error(y_test, cost_preds)
+cost_r2 = r2_score(y_test, cost_preds)
+joblib

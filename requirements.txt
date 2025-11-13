@@ -4,3 +4,6 @@ numpy
 scikit-learn
 joblib
 matplotlib
+openai
+kagglehub
+seaborn

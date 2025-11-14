@@ -1,6 +1,6 @@
 # =====================================================
 # 🔋 EV Insight — Battery Life & Cost Predictor
-# Streamlit App with 3 Models: Life, Cost, Health
+# Streamlit App (FINAL FIXED VERSION)
 # =====================================================
 
 import streamlit as st
@@ -17,7 +17,6 @@ from datetime import datetime
 # =====================================================
 st.set_page_config(page_title="EV Insight", page_icon="🔋", layout="wide")
 
-# Title Banner
 st.markdown("""
 <div style='background:linear-gradient(90deg,#d7f9e9,#ecfff3); padding:15px; border-radius:10px'>
     <h1 style='color:#045c3c; text-align:center;'>🔋 EV Insight — Battery Life & Cost Predictor</h1>
@@ -27,65 +26,58 @@ st.markdown("""
 
 
 # =====================================================
-# 2️⃣ MODEL LOADING SECTION
+# 2️⃣ MODEL LOADING
 # =====================================================
-# All models must be saved in the "model" folder
 MODEL_DIR = os.path.join(os.getcwd(), 'model')
 
 try:
     life_model = joblib.load(os.path.join(MODEL_DIR, 'ev_life_model.pkl'))
     cost_model = joblib.load(os.path.join(MODEL_DIR, 'ev_cost_model.pkl'))
     health_model = joblib.load(os.path.join(MODEL_DIR, 'ev_health_model.pkl'))
-    st.success("✅ Models loaded successfully from 'model/' folder.")
+    st.success("✅ ML Models loaded from /model/")
 except Exception as e:
-    st.error(f"⚠️ Could not load models: {e}")
+    st.error(f"❌ Error loading models: {e}")
     st.stop()
 
 
 # =====================================================
-# 3️⃣ DATA HANDLING SECTION
+# 3️⃣ DATA HANDLING
 # =====================================================
 st.subheader("📂 Upload or Use Sample Dataset")
 
-# Allow user to upload their own CSV file
-uploaded = st.file_uploader("Upload your EV dataset (CSV)", type=["csv"])
+uploaded = st.file_uploader("Upload EV dataset (CSV)", type=["csv"])
 
-if uploaded is not None:
-    try:
-        df = pd.read_csv(uploaded)
-        st.success("✅ Uploaded dataset successfully loaded.")
-    except Exception as e:
-        st.error(f"Error loading your file: {e}")
-        st.stop()
+if uploaded:
+    df = pd.read_csv(uploaded)
+    st.success("✔️ Your dataset loaded!")
 else:
-    # Use default dataset if no upload provided
-    DATA_PATH = os.path.join(os.getcwd(), 'data', 'merged_ev_data.csv')
-    if os.path.exists(DATA_PATH):
-        df = pd.read_csv(DATA_PATH)
-        st.info("ℹ️ Using sample dataset (merged_ev_data.csv)")
-    else:
-        st.error("❌ No dataset found. Please upload a CSV file.")
+    data_path = os.path.join(os.getcwd(), "data", "merged_ev_data.csv")
+    if not os.path.exists(data_path):
+        st.error("❌ Sample dataset not found. Please upload a CSV.")
         st.stop()
 
-# Display first 8 rows of dataset
+    df = pd.read_csv(data_path)
+    st.info("ℹ️ Using default sample dataset.")
+
 st.dataframe(df.head(8))
 
 
 # =====================================================
-# 4️⃣ USER SELECTION FOR PREDICTION
+# 4️⃣ PREDICTION INPUT SELECTION
 # =====================================================
 st.markdown("---")
-st.subheader("🔍 Select a Sample for Prediction")
+st.subheader("🔍 Select a Row to Predict")
 
-# User can pick a specific row index to test
-idx = st.number_input("Row Index (0-based)", min_value=0, max_value=max(0, len(df) - 1), value=0)
+idx = st.number_input("Row Index", min_value=0, max_value=len(df) - 1, value=0)
 selected = df.iloc[[idx]]
 
-# Important input features used by models
+# SAME FEATURE COLUMNS USED DURING TRAINING
 feat_cols = [
     'battery_temperature', 'voltage', 'current', 'state_of_charge',
     'avg_current', 'state_of_health', 'mileage_km', 'age_months'
 ]
+
+X_df = selected[feat_cols]  # <-- FIXED (prevents sklearn warnings)
 
 
 # =====================================================
@@ -95,96 +87,90 @@ st.markdown("---")
 st.subheader("📊 Prediction Results")
 
 try:
-    # Extract selected row data
-    Xsel = selected[feat_cols].values
+    # Life Model
+    pred_cycles = life_model.predict(X_df)[0]
 
-    # Predict charge cycles (life model)
-    pred_cycles = life_model.predict(Xsel)[0]
+    # Cost Model
+    pred_cost = cost_model.predict(X_df)[0]
 
-    # Predict battery replacement cost (cost model)
-    pred_cost = cost_model.predict(Xsel)[0]
+    # Health Model (uses previous outputs)
+    health_input = pd.DataFrame([{
+        "predicted_cycles": pred_cycles,
+        "predicted_cost": pred_cost,
+        "state_of_health": selected['state_of_health'].values[0]
+    }])
 
-    # Display results in metric boxes
-    st.metric("Predicted Remaining Charge Cycles", f"{pred_cycles:.0f}")
-    st.metric("Estimated Battery Replacement Cost (USD)", f"${pred_cost:,.2f}")
+    pred_health = health_model.predict(health_input)[0]
 
-    # Combine predictions + SOH for health model
-    hybrid_in = np.array([[pred_cycles, pred_cost, selected['state_of_health'].values[0]]])
-    health = health_model.predict(hybrid_in)[0]
-
-    # Display health index
-    st.metric("Battery Health Index (0-100)", f"{health:.1f}%")
+    # Display
+    st.metric("🔋 Remaining Charge Cycles", f"{pred_cycles:.0f}")
+    st.metric("💰 Estimated Replacement Cost (USD)", f"${pred_cost:,.2f}")
+    st.metric("❤️ Battery Health (%)", f"{pred_health:.1f}%")
 
 except Exception as e:
-    st.error(f"Prediction failed: {e}")
+    st.error(f"❌ Prediction Error: {e}")
 
 
 # =====================================================
-# 6️⃣ VISUALIZATION SECTION (Degradation Plot)
+# 6️⃣ VISUALIZATION (NO WARNINGS)
 # =====================================================
 st.markdown("---")
 st.subheader("📈 Battery Degradation Trend")
 
 try:
-    # Predict all samples for visualization
-    preds = life_model.predict(df[feat_cols].values)
+    preds = life_model.predict(df[feat_cols])
     df['predicted_cycles'] = preds
 
-    # Create line plot
     fig, ax = plt.subplots(figsize=(10, 4))
-    ax.plot(df.index, df['predicted_cycles'], color='#0b6b3a', linewidth=2)
+    ax.plot(df.index, df['predicted_cycles'], linewidth=2)
     ax.set_title("Predicted Battery Cycle Degradation")
     ax.set_xlabel("Sample Index")
-    ax.set_ylabel("Predicted Remaining Cycles")
+    ax.set_ylabel("Remaining Cycles")
     ax.grid(True)
 
-    # Display the plot
     st.pyplot(fig)
 
 except Exception as e:
-    st.error(f"Plotting failed: {e}")
+    st.error(f"❌ Plotting Error: {e}")
 
 
 # =====================================================
-# 7️⃣ CHATBOT SECTION
+# 7️⃣ SIMPLE CHATBOT (NO OPENAI)
 # =====================================================
 st.markdown("---")
-st.subheader("🤖 AI Chat Assistant")
+st.subheader("🤖 EV Chat Assistant")
 
-# Store conversation in session
-if 'chat' not in st.session_state:
-    st.session_state['chat'] = [
-        {'role': 'assistant', 'content': 'Hi there! Ask me about EV battery life, cost, or maintenance tips.'}
+if "chat" not in st.session_state:
+    st.session_state.chat = [
+        {"role": "assistant", "content": "Hello! Ask me anything about EV batteries."}
     ]
 
-# Display chat messages
-for msg in st.session_state['chat']:
-    if msg['role'] == 'assistant':
-        st.info(f"**Assistant:** {msg['content']}")
+for msg in st.session_state.chat:
+    if msg["role"] == "assistant":
+        st.info("**Assistant:** " + msg["content"])
     else:
-        st.success(f"**You:** {msg['content']}")
+        st.success("**You:** " + msg["content"])
 
-# Text input for new message
-user_input = st.text_input("Ask your question...")
+user_msg = st.text_input("Ask a question:")
 
-# Chat response logic
-if user_input:
-    st.session_state['chat'].append({'role': 'user', 'content': user_input})
-    text = user_input.lower()
+if user_msg:
+    st.session_state.chat.append({"role": "user", "content": user_msg})
 
-    if 'charge' in text:
-        ans = "Avoid frequent fast charging — it shortens battery lifespan. Prefer slow charging."
-    elif 'temperature' in text:
-        ans = "High temperatures accelerate degradation — store your EV in shaded or cool areas."
-    elif 'cost' in text or 'price' in text:
-        ans = "Battery replacement costs vary by capacity — upload your dataset for refined results."
-    elif 'health' in text:
-        ans = "Battery health depends on cycles, age, and temperature — your dashboard shows predictions."
+    text = user_msg.lower()
+
+    # Basic rule-based EV chatbot
+    if "charge" in text:
+        reply = "Slow charging increases lifespan. Avoid fast charging daily."
+    elif "temperature" in text:
+        reply = "Keep your EV battery cool. Heat speeds up degradation."
+    elif "health" in text:
+        reply = "Battery health depends on cycles, temperature, and usage."
+    elif "cost" in text:
+        reply = "Replacement cost varies by capacity — check predictions above."
     else:
-        ans = "I can help with EV battery performance, cost predictions, and maintenance recommendations."
+        reply = "I can help with battery life, health, cost, or maintenance!"
 
-    # Append answer and refresh UI
-    st.session_state['chat'].append({'role': 'assistant', 'content': ans})
+    st.session_state.chat.append({"role": "assistant", "content": reply})
     st.rerun()
 
 

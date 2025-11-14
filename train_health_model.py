@@ -28,8 +28,8 @@ X = df[features]
 
 # Add predictions
 merged = X.copy()
-merged['pred_cycles'] = life_model.predict(X)
-merged['pred_cost'] = cost_model.predict(X)
+merged['predicted_cycles'] = life_model.predict(X)
+merged['predicted_cost'] = cost_model.predict(X)
 
 # Hybrid index
 hybrid_target = (df['state_of_health'] * 0.6 + merged['pred_cycles'] / 40).clip(0, 100)
@@ -42,9 +42,10 @@ health_model = RandomForestRegressor(
 )
 
 health_model.fit(
-    merged[['pred_cycles', 'pred_cost', 'state_of_health']],
+    merged[['predicted_cycles', 'predicted_cost', 'state_of_health']],
     hybrid_target
 )
 
 joblib.dump(health_model, os.path.join(MODEL_DIR, 'ev_health_model.pkl'))
 print("✅ Battery Health Model trained and saved successfully!")
+

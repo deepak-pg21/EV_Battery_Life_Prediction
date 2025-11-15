@@ -1,4 +1,4 @@
-# Ignore Streamlit secrets file containing API keys
+# Ignore Streamlit secrets file to protect API Keys
 .streamlit/secrets.toml
 
 # Byte-compiled / optimized / DLL files
@@ -6,31 +6,38 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Environment and virtual environment folders
+# Environments
 .env
+env/
 venv/
-.env/
+ENV/
+
+# VSCode / IDE settings folders
+.vscode/
+.idea/
 
 # Jupyter Notebook checkpoints
-.ipynb_checkpoints
+.ipynb_checkpoints/
 
-# OS-specific files
-.DS_Store          # macOS
-Thumbs.db          # Windows
+# macOS system files
+.DS_Store
 
-# Python packaging files
-*.egg-info/
+# Windows system files
+Thumbs.db
+
+# Distribution / packaging
 dist/
 build/
+*.egg-info/
 
 # Logs and databases
 *.log
 *.sqlite3
 
-# IDE and editor folders
-.vscode/
-.idea/
-
-# Other temporary files
-*.bak
+# Temporary files
 *.tmp
+*.bak
+
+# Coverage reports
+.coverage
+htmlcov/

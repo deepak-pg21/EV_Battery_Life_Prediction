@@ -61,22 +61,22 @@ With a responsive Streamlit dashboard and optional OpenAI chatbot, it’s built 
 ## 🏗️ File Structure
 ```
 EV-Insight/
-│
-├── data/
-│   ├── raw/                 # Raw telemetry and pricing datasets (for reference or future use)
-│   ├── processed/           # Cleaned and processed datasets used by app.py
-│   └── sample_inputs.csv    # Sample dataset CSV for demo/testing
-│
-├── model/                   # Directory containing trained ML models as serialized files
-│   ├── ev_life_model.pkl
-│   ├── ev_cost_model.pkl
-│   └── ev_health_model.pkl
-│
-├── app.py                   # Main Streamlit application with prediction & chatbot features
-│
-├── requirements.txt         # Python dependencies needed to run app.py
-├── README.md                # Project overview, setup, usage, and notes
-├── LICENSE                  # Project license file (MIT or preferred)
+  data/
+    raw/                 # Raw telemetry and pricing datasets (reference or future use)
+    processed/           # Cleaned, merged datasets used by the app
+    sample_inputs.csv    # Sample CSV data for quick tests or demos
+
+  model/
+    ev_life_model.pkl    # Battery life predictor model
+    ev_cost_model.pkl    # Battery replacement cost estimator
+    ev_health_model.pkl  # Hybrid battery health prediction model
+
+  app.py                 # Main Streamlit app (battery metrics + chatbot)
+
+  requirements.txt       # Python dependencies
+  README.md              # Project documentation
+  LICENSE                # License file
+  .gitignore             # Files & secrets ignore
 ```
 ## ⚙️ Setup & Deployment
 

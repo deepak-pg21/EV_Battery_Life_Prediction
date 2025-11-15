@@ -59,34 +59,24 @@ With a responsive Streamlit dashboard and optional OpenAI chatbot, it’s built 
 ---
 
 ## 🏗️ File Structure
-EV-Insight/
-│                                                  
-├── data/
-│   ├── raw/               # Telemetry and pricing sources
-│   ├── processed/         # Cleaned, merged data
-│   └── sample_inputs.csv
-│
-├── models/
-│   ├── cycle_predictor.pkl
-│   ├── cost_estimator.pkl
-│   └── bhi_fusion_model.pkl
-│
-├── app/
-│   ├── dashboard.py       # Streamlit dashboard
-│   ├── chatbot.py         # Chat assistant
-│   └── visualization.py   # Charts & analytics
-│
-├── notebooks/
-│   ├── EDA_and_Features.ipynb
-│   ├── Model_Training.ipynb
-│   └── Model_Evaluation.ipynb
-│
-├── requirements.txt
-├── README.md
-├── LICENSE
-└── main.py    
 
----
+EV-Insight/
+│
+├── data/
+│   ├── raw/                 # Raw telemetry and pricing datasets (for reference or future use)
+│   ├── processed/           # Cleaned and processed datasets used by app.py
+│   └── sample_inputs.csv    # Sample dataset CSV for demo/testing
+│
+├── model/                   # Directory containing trained ML models as serialized files
+│   ├── ev_life_model.pkl
+│   ├── ev_cost_model.pkl
+│   └── ev_health_model.pkl
+│
+├── app.py                   # Main Streamlit application with prediction & chatbot features
+│
+├── requirements.txt         # Python dependencies needed to run app.py
+├── README.md                # Project overview, setup, usage, and notes
+├── LICENSE                  # Project license file (MIT or preferred)
 
 ## ⚙️ Setup & Deployment
 

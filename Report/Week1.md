@@ -39,7 +39,7 @@ Given historical battery telemetry data — including cycle number, temperature,
 
 ## Dataset Sources
 
-- NASA Battery Datasets (Official public datasets, e.g., prognostics data repository)  
+
 - CALCE Battery Research datasets  
 - Kaggle Battery Degradation datasets  
 - Manufacturer or Telematics System data (subject to availability)

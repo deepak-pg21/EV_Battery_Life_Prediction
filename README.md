@@ -59,7 +59,7 @@ With a responsive Streamlit dashboard and optional OpenAI chatbot, it’s built 
 ---
 
 ## 🏗️ File Structure
-'''
+```
 EV-Insight/
 │
 ├── data/
@@ -77,7 +77,7 @@ EV-Insight/
 ├── requirements.txt         # Python dependencies needed to run app.py
 ├── README.md                # Project overview, setup, usage, and notes
 ├── LICENSE                  # Project license file (MIT or preferred)
-'''
+```
 ## ⚙️ Setup & Deployment
 
 **Clone & Install**

@@ -3,32 +3,65 @@
 **Project:** EV_Battery_Life_Prediction  
 **Author:** P.G. Deepak Chiranjeevi
 
+---
+
 ## Objective
-Develop a machine-learning model to predict the Remaining Useful Life (RUL) and degradation rate of electric vehicle batteries using operational, environmental, and usage data.
+
+Develop a machine learning model to accurately predict the Remaining Useful Life (RUL) and degradation rate of electric vehicle (EV) batteries using operational, environmental, and usage data.
+
+---
 
 ## Problem Statement
-Given historical battery telemetry (cycle number, temperature, current, voltage, capacity measurements, internal resistance), predict the remaining capacity percentage and estimate degradation trend.
+
+Given historical battery telemetry data — including cycle number, temperature, current, voltage, capacity measurements, and internal resistance — the goal is to:
+
+- Predict the battery’s Remaining Capacity percentage (continuous regression target)
+- Optionally classify battery state into Healthy, Degraded, or Critical categories
+- Estimate degradation trends to support predictive maintenance and lifecycle planning
+
+---
 
 ## Scope
-- Regression problem (predict continuous Remaining Capacity %)
-- Optional classification (Healthy / Degraded / Critical)
-- Use features: cycle, temperature, voltage, current, capacity, internal resistance, C-rate, energy throughput
 
-## Dataset Sources (examples)
-- NASA battery datasets  
+- Formulated as a regression task (predicting Remaining Capacity %)
+- Optional classification layering based on thresholded capacity levels
+- Key features to be utilized include:  
+  - Cycle number  
+  - Temperature  
+  - Voltage  
+  - Current  
+  - Battery capacity  
+  - Internal resistance  
+  - C-rate  
+  - Energy throughput
+  
+---
+
+## Dataset Sources
+
+- NASA Battery Datasets (Official public datasets, e.g., prognostics data repository)  
 - CALCE Battery Research datasets  
-- Kaggle (battery degradation datasets)  
-- Manufacturer/telematics data (if available)
+- Kaggle Battery Degradation datasets  
+- Manufacturer or Telematics System data (subject to availability)
+
+---
 
 ## Tools & Environment
-- Python (pandas, numpy, scikit-learn)
-- Jupyter Notebook / Google Colab
-- Streamlit (for demo UI)
-- Optional: python-docx for report generation, matplotlib/seaborn for plots
+
+- Programming Language: Python  
+- Libraries: pandas, numpy, scikit-learn  
+- Development Environment: Jupyter Notebook / Google Colab  
+- Visualization: matplotlib, seaborn  
+- User Interface: Streamlit (for future demo application)  
+- Documentation: python-docx (for report generation)
+
+---
 
 ## Deliverables (End of Week 1)
-- Problem definition and objectives
-- Selected dataset saved in `dataset/`
-- Environment setup instructions
-- Streamlit skeleton app in `Week_1/Code/main_week1.py`
 
+- Clear problem definition and project objectives  
+- Downloaded and saved chosen dataset(s) into `dataset/` directory  
+- Environment setup documentation for reproducibility  
+- Streamlit skeleton application authored in `Week_1/Code/main_week1.py` for initial exploration
+
+---

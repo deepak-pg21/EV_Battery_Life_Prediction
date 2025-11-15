@@ -76,7 +76,7 @@ EV-Insight/
   requirements.txt       # Python dependencies
   README.md              # Project documentation
   LICENSE                # License file
-  .gitignore             # Files & secrets ignore
+  
 ```
 ## ⚙️ Setup & Deployment
 

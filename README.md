@@ -6,7 +6,7 @@
 
 ---
 
-![EV Insight Banner](https://user-images.githubusercontent.com/000000/ev-banner-green.png)
+
 
 EV Insight is a predictive maintenance and analytics web app for electric vehicles (EVs).  
 It forecasts remaining battery charge cycles, estimates battery replacement cost, and computes a Battery Health Index (BHI) using hybrid ML models and real-world telemetry.  

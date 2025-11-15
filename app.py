@@ -1,246 +1,239 @@
-# =====================================================
-# 🔋 EV Insight — Battery Life & Cost Predictor
-# Streamlit App (FINAL FIXED VERSION)
-# =====================================================
+#!/usr/bin/env python3
+"""
+EV Insight: Streamlit Dashboard with AI Chatbot
+Predict battery charge cycles, replacement cost, health index, and answer user queries interactively.
+Enhanced with secure OpenAI API key handling via .streamlit/secrets.toml.
+"""
 
+import os
 import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
-import os
 import matplotlib.pyplot as plt
 from datetime import datetime
+from openai import OpenAI
+from openai.error import OpenAIError
 
+# ------------------------------------------------------------
+# --- PAGE CONFIGURATION ---
+# ------------------------------------------------------------
+st.set_page_config(
+    page_title="EV Insight ⚡ Battery Predictor & AI Assistant",
+    page_icon="🔋",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
-# =====================================================
-# 1️⃣ PAGE CONFIGURATION
-# =====================================================
-st.set_page_config(page_title="EV Insight", page_icon="🔋", layout="wide")
+def load_model(filename):
+    path = os.path.join(MODEL_DIR, filename)
+    if not os.path.exists(path):
+        st.error(f"Model file missing: {filename}. Please train models first.")
+        st.stop()
+    return joblib.load(path)
 
+def predict_all_models(row):
+    X = row[FEATURE_COLUMNS]
+    cycles_pred = life_model.predict(X)[0]
+    cost_pred = cost_model.predict(X)[0]
+    health_input = pd.DataFrame([{
+        "predicted_cycles": cycles_pred,
+        "predicted_cost": cost_pred,
+        "state_of_health": row["state_of_health"].values[0]
+    }])
+    health_pred = health_model.predict(health_input)[0]
+    return cycles_pred, cost_pred, health_pred
+
+def plot_degradation(df, feature_cols):
+    try:
+        preds = life_model.predict(df[feature_cols])
+        df['predicted_cycles'] = preds
+
+        fig, ax = plt.subplots(figsize=(10, 4))
+        ax.plot(df.index, df['predicted_cycles'], color='#047857', linewidth=2)
+        ax.set_title("🔋 Predicted Battery Cycle Degradation Over Dataset")
+        ax.set_xlabel("Data Index")
+        ax.set_ylabel("Remaining Cycles")
+        ax.grid(True)
+        st.pyplot(fig)
+    except Exception as e:
+        st.error(f"Plotting error: {e}")
+
+def ai_chat_response(prompt: str, client: OpenAI) -> str:
+    try:
+        completion = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a helpful EV battery assistant."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7,
+            max_tokens=500
+        )
+        return completion.choices[0].message.content.strip()
+    except OpenAIError as e:
+        return f"⚠️ OpenAI API error: {e}"
+
+# ------------------------------------------------------------
+# --- CONSTANTS ---
+# ------------------------------------------------------------
+MODEL_DIR = os.path.join(os.getcwd(), 'model')
+DATA_DIR = os.path.join(os.getcwd(), 'data')
+DATA_FILE = os.path.join(DATA_DIR, 'merged_ev_data.csv')
+
+FEATURE_COLUMNS = [
+    'battery_temperature', 'voltage', 'current',
+    'state_of_charge', 'avg_current',
+    'state_of_health', 'mileage_km', 'age_months'
+]
+
+# ------------------------------------------------------------
+# --- HEADER & INTRO ---
+# ------------------------------------------------------------
 st.markdown("""
-<div style='background:linear-gradient(90deg,#d7f9e9,#ecfff3); padding:15px; border-radius:10px'>
-    <h1 style='color:#045c3c; text-align:center;'>🔋 EV Insight — Battery Life & Cost Predictor</h1>
-    <p style='text-align:center; color:#045c3c;'>Predict EV battery charge cycles, replacement cost, and health with intelligent insights.</p>
+<div style="background:linear-gradient(90deg, #d7f9e9, #ecfff3); padding: 20px; border-radius: 12px; box-shadow: 3px 3px 12px #b7d7c3;">
+<h1 style="color: #065f46; text-align: center;">🔋 EV Insight — Battery Life, Cost & Health Predictor</h1>
+<p style="text-align: center; font-size: 1.1rem; color: #065f46;">
+Predict remaining battery charge cycles, estimate replacement cost, and monitor health with intelligent insights and AI assistance.
+</p>
 </div>
 """, unsafe_allow_html=True)
 
-
-# =====================================================
-# 2️⃣ MODEL LOADING
-# =====================================================
-MODEL_DIR = os.path.join(os.getcwd(), 'model')
-
+# ------------------------------------------------------------
+# --- Load ML Models ---
+# ------------------------------------------------------------
 try:
-    life_model = joblib.load(os.path.join(MODEL_DIR, 'ev_life_model.pkl'))
-    cost_model = joblib.load(os.path.join(MODEL_DIR, 'ev_cost_model.pkl'))
-    health_model = joblib.load(os.path.join(MODEL_DIR, 'ev_health_model.pkl'))
-    st.success("✅ ML Models loaded from /model/")
+    life_model = load_model('ev_life_model.pkl')
+    cost_model = load_model('ev_cost_model.pkl')
+    health_model = load_model('ev_health_model.pkl')
+    st.success("✅ Machine Learning models loaded successfully")
 except Exception as e:
-    st.error(f"❌ Error loading models: {e}")
+    st.error(f"Failed to load models: {e}")
     st.stop()
 
+# ------------------------------------------------------------
+# --- Load Dataset ---
+# ------------------------------------------------------------
+try:
+    if not os.path.exists(DATA_FILE):
+        st.warning("Sample dataset not found locally. Please upload your dataset below.")
+        df = None
+    else:
+        df = pd.read_csv(DATA_FILE)
+        st.info(f"Sample dataset loaded: {df.shape[0]} rows, {df.shape[1]} columns")
+except Exception as e:
+    st.error(f"Error loading dataset: {e}")
+    df = None
 
-# =====================================================
-# 3️⃣ DATA HANDLING
-# =====================================================
-st.subheader("📂 Upload or Use Sample Dataset")
+# ------------------------------------------------------------
+# --- Data Upload ---
+# ------------------------------------------------------------
+uploaded_file = st.file_uploader("Upload your EV dataset (.csv format)", type=["csv"])
+if uploaded_file:
+    try:
+        df = pd.read_csv(uploaded_file)
+        st.success("✔️ Uploaded dataset loaded successfully!")
+    except Exception as e:
+        st.error(f"Error parsing uploaded CSV: {e}")
 
-uploaded = st.file_uploader("Upload EV dataset (CSV)", type=["csv"])
+if df is None:
+    st.stop()
 
-if uploaded:
-    df = pd.read_csv(uploaded)
-    st.success("✔️ Your dataset loaded!")
-else:
-    data_path = os.path.join(os.getcwd(), "data", "merged_ev_data.csv")
-    if not os.path.exists(data_path):
-        st.error("❌ Sample dataset not found. Please upload a CSV.")
-        st.stop()
-
-    df = pd.read_csv(data_path)
-    st.info("ℹ️ Using default sample dataset.")
-
+# ------------------------------------------------------------
+# --- Display Dataset Preview ---
+# ------------------------------------------------------------
+st.subheader("🗂️ Dataset Preview (first 8 rows)")
 st.dataframe(df.head(8))
 
-
-# =====================================================
-# 4️⃣ PREDICTION INPUT SELECTION
-# =====================================================
+# ------------------------------------------------------------
+# --- User Selection for Prediction ---
+# ------------------------------------------------------------
 st.markdown("---")
-st.subheader("🔍 Select a Row to Predict")
+st.subheader("🔍 Select a Data Record to Predict")
 
-idx = st.number_input("Row Index", min_value=0, max_value=len(df) - 1, value=0)
-selected = df.iloc[[idx]]
+row_index = st.number_input(
+    "Choose row index (0-based):",
+    min_value=0,
+    max_value=len(df) - 1,
+    value=0,
+    step=1
+)
+selected_row = df.iloc[[row_index]]
 
-# SAME FEATURE COLUMNS USED DURING TRAINING
-feat_cols = [
-    'battery_temperature', 'voltage', 'current', 'state_of_charge',
-    'avg_current', 'state_of_health', 'mileage_km', 'age_months'
-]
+# Validate selected features presence
+missing_cols = [c for c in FEATURE_COLUMNS + ['state_of_health'] if c not in selected_row.columns]
+if missing_cols:
+    st.error(f"Selected data missing columns: {missing_cols}")
+    st.stop()
 
-X_df = selected[feat_cols]  # <-- FIXED (prevents sklearn warnings)
-
-
-# =====================================================
-# 5️⃣ MODEL PREDICTIONS
-# =====================================================
+# ------------------------------------------------------------
+# --- Perform Predictions ---
+# ------------------------------------------------------------
 st.markdown("---")
-st.subheader("📊 Prediction Results")
+st.subheader("📊 Model Predictions")
 
 try:
-    # Life Model
-    predicted_cycles = life_model.predict(X_df)[0]
+    pred_cycles, pred_cost, pred_health = predict_all_models(selected_row)
 
-    # Cost Model
-    predicted_cost = cost_model.predict(X_df)[0]
-
-    # Health Model (uses previous outputs)
-    health_input = pd.DataFrame([{
-        "predicted_cycles": predicted_cycles,
-        "predicted_cost": predicted_cost,
-        "state_of_health": selected['state_of_health'].values[0]
-    }])
-
-    pred_health = health_model.predict(health_input)[0]
-
-    # Display
-    st.metric("🔋 Remaining Charge Cycles", f"{pred_cycles:.0f}")
+    st.metric("🔋 Remaining Charge Cycles", f"{pred_cycles:.0f} cycles")
     st.metric("💰 Estimated Replacement Cost (USD)", f"${pred_cost:,.2f}")
-    st.metric("❤️ Battery Health (%)", f"{pred_health:.1f}%")
-
+    st.metric("❤️ Battery Health Index", f"{pred_health:.1f}%")
 except Exception as e:
-    st.error(f"❌ Prediction Error: {e}")
+    st.error(f"Error during prediction: {e}")
 
-
-# =====================================================
-# 6️⃣ VISUALIZATION (NO WARNINGS)
-# =====================================================
+# ------------------------------------------------------------
+# --- Visualization of Battery Degradation ---
+# ------------------------------------------------------------
 st.markdown("---")
-st.subheader("📈 Battery Degradation Trend")
+st.subheader("📈 Battery Cycle Degradation Over Dataset")
+plot_degradation(df, FEATURE_COLUMNS)
 
-try:
-    preds = life_model.predict(df[feat_cols])
-    df['predicted_cycles'] = preds
-
-    fig, ax = plt.subplots(figsize=(10, 4))
-    ax.plot(df.index, df['predicted_cycles'], linewidth=2)
-    ax.set_title("Predicted Battery Cycle Degradation")
-    ax.set_xlabel("Sample Index")
-    ax.set_ylabel("Remaining Cycles")
-    ax.grid(True)
-
-    st.pyplot(fig)
-
-except Exception as e:
-    st.error(f"❌ Plotting Error: {e}")
-
-
-
-
-# -----------------------------------------------------------
-#  7️⃣ 🤖 ADVANCED EV CHATBOT
-# -----------------------------------------------------------
-
+# ------------------------------------------------------------
+# --- AI Chatbot Integration ---
+# ------------------------------------------------------------
 st.markdown("---")
-st.subheader("🤖 EV Smart Chat Assistant")
+st.subheader("🤖 EV Battery AI Chatbot")
 
-# Initialize chat history
-if "chat" not in st.session_state:
-    st.session_state.chat = [
-        {"role": "assistant", "content": "Hello! I'm your EV Battery AI Assistant. Ask me anything."}
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = [
+        {"role": "assistant", "content": "Hello! I’m your EV Battery AI Assistant. Ask me anything about EV batteries, life, cost, or health."}
     ]
 
-# Display chat messages
-for msg in st.session_state.chat:
-    if msg["role"] == "assistant":
-        st.info("**Assistant:** " + msg["content"])
+# Display chat history
+for message in st.session_state.chat_history:
+    if message['role'] == 'user':
+        st.markdown(f"**You:** {message['content']}")
     else:
-        st.success("**You:** " + msg["content"])
+        st.markdown(f"**Assistant:** {message['content']}")
 
+# Read OpenAI key securely
+openai_api_key = None
+if "OPENAI_API_KEY" in st.secrets:
+    openai_api_key = st.secrets["OPENAI_API_KEY"]
+else:
+    openai_api_key = os.getenv("OPENAI_API_KEY")
 
-# User input
-user_msg = st.text_input("Ask a question about EV Batteries, Life, Cost, Health, Charging, etc:")
+# User Input & Chatbot Response
+user_question = st.text_input("Ask your EV battery question below:")
 
-if user_msg:
-    st.session_state.chat.append({"role": "user", "content": user_msg})
-    text = user_msg.lower()
+if user_question:
+    if openai_api_key:
+        st.session_state.chat_history.append({"role": "user", "content": user_question})
+        client = OpenAI(api_key=openai_api_key)
+        with st.spinner("AI is thinking..."):
+            answer = ai_chat_response(user_question, client)
+        st.session_state.chat_history.append({"role": "assistant", "content": answer})
+        st.experimental_rerun()
+    else:
+        st.warning("OpenAI API key missing. Please configure your key in .streamlit/secrets.toml or environment variable.")
+        # To avoid repeated warnings on rerun
+        user_question = None
 
-    # -----------------------------------------------------------
-    # 🔥 Smarter Context-Aware Responses
-    # -----------------------------------------------------------
-
-    reply = None
-
-    # 🔋 Battery Charge & Life
-    if any(word in text for word in ["charge", "charging", "fast charge", "slow charge"]):
-        reply = (
-            "Fast charging is convenient but increases battery heat, which accelerates degradation. "
-            "For long-term health, use slow/normal charging for daily use and fast charging only when needed."
-            break
-        )
-
-    # 🌡 Temperature
-    elif any(word in text for word in ["temperature", "heat", "cooling", "hot", "cold"]):
-        reply = (
-            "Battery temperature is crucial. EV batteries perform best between **15°C – 35°C**. "
-            "High heat speeds up chemical wear; extreme cold reduces efficiency. "
-            "Pre-conditioning helps maintain optimal temperature."
-            break
-        )
-
-    # 🧬 Battery Health
-    elif any(word in text for word in ["health", "soh", "state of health"]):
-        reply = (
-            "Battery health depends on: charging habits, temperature exposure, depth-of-discharge, "
-            "and total cycle count. Your predictions above estimate SOH using a hybrid ML model."
-       break
-        )
-
-    # 💰 Battery Cost / Replacement
-    elif any(word in text for word in ["cost", "price", "replacement", "expensive"]):
-        reply = (
-            "Battery replacement cost varies by brand and capacity. Typically ₹1.5L – ₹3L in India. "
-            "Your model predicts cost based on temperature, cycles, and usage behaviour."
-       break
-        )
-
-    # 🔄 Battery Cycles & Degradation
-    elif any(word in text for word in ["cycle", "cycles", "degradation", "life", "lifetime"]):
-        reply = (
-            "Battery degradation is influenced mainly by charge cycles, temperature, and driving habits. "
-            "Your prediction model estimates remaining cycles using real-world patterns."
-       break
-            
-        )
-
-    # ⚡ Vehicle Performance
-    elif any(word in text for word in ["motor", "power", "torque", "range"]):
-        reply = (
-            "Range depends on battery health, speed, climate control usage, and driving style. "
-            "Maintaining steady speeds and avoiding rapid acceleration improves efficiency."
-        break
-        )
-
-    # 🧠 General fallback answer (Non-Repetitive)
-    if reply is None:
-        reply = (
-            "I'm here to assist with EV batteries, health, cost, cycles, degradation, and charging. "
-            "Ask me anything specific, like:\n"
-            "- How to increase battery life?\n"
-            "- What affects charging speed?\n"
-            "- How do high temperatures affect health?"
-        )
-
-    # Append reply
-    st.session_state.chat.append({"role": "assistant", "content": reply})
-
-    # Refresh UI
-    st.rerun()
-
-
-# =====================================================
-# 8️⃣ FOOTER
-# =====================================================
+# ------------------------------------------------------------
+# --- Footer ---
+# ------------------------------------------------------------
 st.markdown("---")
-st.caption("Generated by EV Insight © " + datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-
-
+st.markdown(
+    f"<p style='text-align:center; font-size:0.9em; color:gray;'>© {datetime.now().year} EV Insight by PG Deepak Chiranjeevi. Developed for EV battery forecasting and AI assistance.</p>",
+    unsafe_allow_html=True
+)

@@ -60,7 +60,7 @@ With a responsive Streamlit dashboard and optional OpenAI chatbot, it’s built 
 
 ## 🏗️ File Structure
 EV-Insight/
-│
+│                                                  
 ├── data/
 │   ├── raw/               # Telemetry and pricing sources
 │   ├── processed/         # Cleaned, merged data

@@ -1,9 +1,6 @@
-streamlit
-pandas
-numpy
-scikit-learn
-joblib
-matplotlib
-openai
-kagglehub
-seaborn
+streamlit>=1.20.0
+pandas>=1.4.0
+joblib>=1.2.0
+matplotlib>=3.5.0
+transformers>=4.28.0
+torch>=1.12.0

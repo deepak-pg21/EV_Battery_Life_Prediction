@@ -224,24 +224,78 @@ st.markdown("---")
 st.subheader("📈 Battery Cycle Degradation Across Dataset")
 plot_degradation(df)
 
-# --- Chatbot Section ---
-st.markdown("---")
-st.subheader("🤖 Interactive AI Battery Assistant")
+# ============================
+# ---- ChatterBot Setup ------
+# ============================
 
+from chatterbot import ChatBot
+from chatterbot.trainers import ChatterBotCorpusTrainer
+
+# Create chatbot instance (stored locally)
+battery_bot = ChatBot(
+    "EVBatteryBot",
+    storage_adapter="chatterbot.storage.SQLStorageAdapter",
+    logic_adapters=[
+        {
+            "import_path": "chatterbot.logic.BestMatch",
+            "default_response": "I’m not sure about that. Can you ask differently?",
+            "maximum_similarity_threshold": 0.70
+        }
+    ],
+    database_uri="sqlite:///evbatterydb.sqlite3"
+)
+
+# Train bot with English corpus + custom EV data
+trainer = ChatterBotCorpusTrainer(battery_bot)
+trainer.train("chatterbot.corpus.english")
+
+# Optional: add EV-specific knowledge
+custom_data = [
+    "What affects EV battery life?",
+    "Battery life depends on temperature, charging habits, and load.",
+    "How long does an EV battery last?",
+    "Most EV batteries last 8–12 years depending on usage.",
+    "Does fast charging reduce battery health?",
+    "Yes, frequent fast charging increases heat and speeds up degradation.",
+    "How do you increase EV battery life?",
+    "Avoid high temperatures, keep battery between 20–80%, and avoid fast charging daily."
+]
+
+from chatterbot.trainers import ListTrainer
+list_trainer = ListTrainer(battery_bot)
+list_trainer.train(custom_data)
+
+
+def get_chatbot_response(user_query):
+    """Return free chatterbot response."""
+    try:
+        reply = battery_bot.get_response(user_query)
+        return str(reply)
+    except Exception as e:
+        return f"⚠️ Chatbot Error: {str(e)}"
+
+
+# ============================
+# ---- Chatbot UI Section ----
+# ============================
+
+st.markdown("---")
+st.subheader("🤖 Interactive AI Battery Assistant (FREE ChatterBot)")
+
+# Maintain chat history
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = [
         {"role": "assistant", "content": "Hello! Ask me anything about EV batteries."}
     ]
 
-def display_chat():
-    st.markdown('<div class="chat-container">', unsafe_allow_html=True)
-    for message in st.session_state.chat_history:
-        style = "user-msg" if message["role"] == "user" else "bot-msg"
-        st.markdown(f'<div class="{style}">{message["content"]}</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+# Display previous messages
+for msg in st.session_state.chat_history:
+    if msg["role"] == "assistant":
+        st.info(f"**Assistant:** {msg['content']}")
+    else:
+        st.success(f"**You:** {msg['content']}")
 
-display_chat()
-
+# Chat input
 with st.form(key="chat_form", clear_on_submit=False):
     user_input = st.text_input(
         "Ask anything about EV battery life, cost, or health:",
@@ -250,14 +304,14 @@ with st.form(key="chat_form", clear_on_submit=False):
     )
     submitted = st.form_submit_button("Send")
 
+# Process user message
 if submitted and st.session_state.chat_input and st.session_state.chat_input.strip():
-    user_text = st.session_state.chat_input.strip()
-    st.session_state.chat_history.append({"role": "user", "content": user_text})
+    user_msg = st.session_state.chat_input.strip()
+    st.session_state.chat_history.append({"role": "user", "content": user_msg})
 
     with st.spinner("Bot is thinking..."):
-        answer = get_chatbot_response(user_text)
+        bot_reply = get_chatbot_response(user_msg)
 
-    st.session_state.chat_history.append({"role": "assistant", "content": answer})
-
+    st.session_state.chat_history.append({"role": "assistant", "content": bot_reply})
     st.session_state.chat_input = ""
     st.experimental_rerun()

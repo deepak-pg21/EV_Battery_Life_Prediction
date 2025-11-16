@@ -224,13 +224,13 @@ st.markdown("---")
 st.subheader("📈 Battery Cycle Degradation Across Dataset")
 plot_degradation(df)
 
-# Chatbot Section
+# --- Chatbot Section ---
 st.markdown("---")
 st.subheader("🤖 Interactive AI Battery Assistant")
 
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = [
-        {"role": "assistant", "content": "Hello! I’m here to help with your EV battery queries."}
+        {"role": "assistant", "content": "Hello! Ask me anything about EV batteries."}
     ]
 
 def display_chat():
@@ -241,9 +241,6 @@ def display_chat():
     st.markdown('</div>', unsafe_allow_html=True)
 
 display_chat()
-
-if "chat_input" not in st.session_state:
-    st.session_state.chat_input = ""
 
 with st.form(key="chat_form", clear_on_submit=False):
     user_input = st.text_input(
@@ -257,8 +254,8 @@ if submitted and st.session_state.chat_input and st.session_state.chat_input.str
     user_text = st.session_state.chat_input.strip()
     st.session_state.chat_history.append({"role": "user", "content": user_text})
 
-    with st.spinner("AI is thinking..."):
-        answer = hf_chat_response(user_text)
+    with st.spinner("Bot is thinking..."):
+        answer = get_chatbot_response(user_text)
 
     st.session_state.chat_history.append({"role": "assistant", "content": answer})
 

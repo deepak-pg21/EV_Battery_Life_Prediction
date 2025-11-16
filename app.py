@@ -256,10 +256,11 @@ if submitted and user_input:
     with st.spinner("AI is thinking..."):
         answer = hf_chat_response(user_input)
     st.session_state.chat_history.append({"role": "assistant", "content": answer})
-    st.experimental_rerun()
+    
 
 st.markdown("---")
 st.markdown(
     f'<p style="text-align:center; color:#94a3b8; font-size:0.9em;">© {datetime.now().year} EV Insight by PG Deepak Chiranjeevi</p>',
     unsafe_allow_html=True
 )
+

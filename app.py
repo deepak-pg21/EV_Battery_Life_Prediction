@@ -9,12 +9,11 @@ import streamlit as st
 import pandas as pd
 import joblib
 import matplotlib
-matplotlib.rcParams['font.family'] = 'Symbola'  # <-- Enable emoji in matplotlib titles/labels
+matplotlib.rcParams['font.family'] = 'Symbola'
 import matplotlib.pyplot as plt
 from datetime import datetime
 from transformers import pipeline
 
-# Page config
 st.set_page_config(page_title="EV Insight ⚡ Battery & AI Assistant", page_icon="🔋", layout="wide", initial_sidebar_state="expanded")
 
 MODEL_DIR = os.path.join(os.getcwd(), 'model')
@@ -48,7 +47,7 @@ def plot_degradation(df):
         df['predicted_cycles'] = preds
         fig, ax = plt.subplots(figsize=(10, 4))
         ax.plot(df.index, df['predicted_cycles'], color='#16a34a', linewidth=2)
-        ax.set_title("🔋 Predicted Battery Cycle Degradation")  # Emoji in title!
+        ax.set_title("🔋 Predicted Battery Cycle Degradation")
         ax.set_xlabel("Sample Index")
         ax.set_ylabel("Remaining Cycles")
         ax.grid(True)
@@ -97,7 +96,6 @@ st.markdown("""
   box-shadow: 0 8px 24px rgba(6, 95, 70, 0.15);
   margin-bottom: 2rem;
 }
-
 .tagline {
   font-size: 1.3rem;
   font-weight: 500;
@@ -105,7 +103,6 @@ st.markdown("""
   color: #2d6a4f;
   font-style: italic;
 }
-
 .metrics-wrapper .stMetric {
   background: #bbf7d0;
   border-radius: 15px;
@@ -117,7 +114,6 @@ st.markdown("""
   color: #065f46;
   margin-bottom: 15px;
 }
-
 .chat-container {
   background: #ecfdf5;
   border-radius: 12px;
@@ -128,7 +124,6 @@ st.markdown("""
   display: flex;
   flex-direction: column;
 }
-
 .user-msg {
   background-color: #bbf7d0;
   border-radius: 20px 20px 0 20px;
@@ -139,7 +134,6 @@ st.markdown("""
   color: #065f46;
   font-weight: 600;
 }
-
 .bot-msg {
   background-color: white;
   border-radius: 20px 20px 20px 0;
@@ -150,7 +144,6 @@ st.markdown("""
   color: #334e3e;
   font-weight: 500;
 }
-
 .chat-input {
   padding: 0.5rem 1rem;
   width: 100%;
@@ -158,7 +151,6 @@ st.markdown("""
   border: 2px solid #16a34a;
   font-size: 1.1rem;
 }
-
 </style>
 <div class="hero">
   <h1>🔋 EV Insight — Your Electric Vehicle Battery Companion</h1>
@@ -172,7 +164,6 @@ cost_model = load_model('ev_cost_model.pkl')
 health_model = load_model('ev_health_model.pkl')
 st.success("✅ ML models loaded.")
 
-# Load or upload dataset
 if not os.path.exists(DATA_FILE):
     st.warning("Sample dataset not found! Please upload your CSV file below.")
     df = None
@@ -191,11 +182,9 @@ if uploaded:
 if df is None:
     st.stop()
 
-# Dataset preview
 st.subheader("🗂️ Dataset Preview")
 st.dataframe(df.head(8))
 
-# Selection & Predictions
 st.markdown("---")
 st.subheader("🔍 Select a data row to predict")
 
@@ -217,7 +206,6 @@ try:
     col1.metric("🔋 Remaining Charge Cycles", f"{cycles:.0f} cycles")
     col2.metric("💰 Estimated Replacement Cost", f"${cost:,.2f}")
     col3.metric("❤️ Battery Health Index", f"{health:.1f}%")
-
 except Exception as e:
     st.error(f"Prediction failed: {e}")
 
@@ -225,7 +213,7 @@ st.markdown("---")
 st.subheader("📈 Battery Cycle Degradation Across Dataset")
 plot_degradation(df)
 
-# Chatbot Section
+# ----------- Chatbot Section --------------
 st.markdown("---")
 st.subheader("🤖 Interactive AI Battery Assistant")
 
@@ -243,21 +231,21 @@ def display_chat():
 
 display_chat()
 
-user_input = st.text_input(
-    "Ask anything about EV battery life, cost, or health:",
-    key="chat_input",
-    placeholder="Type your question and press Enter"
-)
+with st.form(key="chat_form"):
+    user_input = st.text_input(
+        "Ask anything about EV battery life, cost, or health:",
+        key="chat_input",
+        placeholder="Type your question and press Enter"
+    )
+    submitted = st.form_submit_button("Send")
 
-if user_input:
+if submitted and user_input:
     st.session_state.chat_history.append({"role": "user", "content": user_input})
     with st.spinner("AI is thinking..."):
         answer = hf_chat_response(user_input)
     st.session_state.chat_history.append({"role": "assistant", "content": answer})
-    try:
-        st.experimental_rerun()
-    except Exception:
-        pass
+    st.session_state.chat_input = ""
+    st.experimental_rerun()
 
 st.markdown("---")
 st.markdown(

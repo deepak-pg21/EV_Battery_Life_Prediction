@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 EV Insight: Beautiful, Inspiring Battery Health & AI Chatbot Streamlit App
-Author: PG Deepak Chiranjeevi (2025) — corrected chatbot flow
+Author: PG Deepak Chiranjeevi (2025) — corrected chatbot flow with working conversational pipeline
 """
 
 import os
@@ -11,8 +11,7 @@ import joblib
 import matplotlib
 matplotlib.rcParams['font.family'] = 'Symbola'
 import matplotlib.pyplot as plt
-from datetime import datetime
-from transformers import pipeline, Conversation, PipelineException
+from transformers import pipeline
 
 st.set_page_config(page_title="EV Insight ⚡ Battery & AI Assistant", page_icon="🔋", layout="wide", initial_sidebar_state="expanded")
 
@@ -60,71 +59,51 @@ def plot_degradation(df):
     except Exception as e:
         st.error(f"Plot error: {e}")
 
+# Chatbot - Load conversational pipeline for multi-turn chat
 @st.cache_resource(show_spinner=False)
 def load_chatbot_model():
-    """
-    Try to create a conversational pipeline. If conversational isn't available,
-    fallback to text-generation but wrap outputs carefully.
-    """
     model_name = "microsoft/DialoGPT-medium"
     try:
-        # conversational pipeline uses Conversation objects and preserves dialogue history
         conv_pipe = pipeline("conversational", model=model_name)
-        return {"type": "conversational", "pipe": conv_pipe}
-    except Exception:
-        # fallback: text-generation (we'll post-process results)
-        try:
-            gen_pipe = pipeline("text-generation", model=model_name, pad_token_id=50256)
-            return {"type": "text-generation", "pipe": gen_pipe}
-        except Exception as e:
-            raise PipelineException(f"Failed to load any HF pipeline: {e}")
+        return conv_pipe
+    except Exception as e:
+        st.error(f"Failed to load chatbot pipeline: {e}")
+        st.stop()
 
-# initialize chatbot pipeline/resource
-chatbot_resource = load_chatbot_model()
+chatbot_pipe = load_chatbot_model()
 
 def hf_chat_response(user_input):
-    """
-    Returns a clean assistant reply for a given user_input while keeping session Conversation.
-    Uses conversational pipeline when available; otherwise falls back to single-turn text-generation.
-    """
     try:
-        if chatbot_resource["type"] == "conversational":
-            conv_pipe = chatbot_resource["pipe"]
-            # keep a Conversation object for the session so history is maintained
-            if "hf_conv" not in st.session_state:
-                st.session_state.hf_conv = Conversation("")
-            # add user input and run
-            st.session_state.hf_conv.add_user_input(user_input)
-            conv_pipe(st.session_state.hf_conv)
-            # generated_responses is a list; take last response
-            responses = st.session_state.hf_conv.generated_responses
-            if responses:
-                reply = responses[-1].strip()
-            else:
+        if "hf_chat_history" not in st.session_state:
+            st.session_state.hf_chat_history = []
+
+        # Build conversation string from history plus current user input
+        conversation_text = " ".join(st.session_state.hf_chat_history + [user_input])
+
+        # Generate response using conversational pipeline
+        outputs = chatbot_pipe(conversation_text)
+        if outputs and len(outputs) > 0:
+            reply = outputs[0].get('generated_text', '').strip()
+            # Clean reply by removing repeated conversation_text prefix if present
+            if reply.lower().startswith(conversation_text.lower()):
+                reply = reply[len(conversation_text):].strip()
+            if not reply:
                 reply = "Sorry, I couldn't generate a response."
-            return reply
         else:
-            gen_pipe = chatbot_resource["pipe"]
-            outputs = gen_pipe(user_input, max_length=200, num_return_sequences=1, truncation=True)
-            if outputs and len(outputs) > 0:
-                # output format varies; try to extract generated_text or text
-                out = outputs[0]
-                generated_text = out.get('generated_text') or out.get('text') or str(out)
-                generated_text = generated_text.strip()
-                # remove prefix repetition of user_input if present
-                if generated_text.lower().startswith(user_input.lower()):
-                    response = generated_text[len(user_input):].strip()
-                else:
-                    response = generated_text
-                if not response:
-                    response = "Sorry, I couldn't generate a response."
-                return response
-            else:
-                return "Sorry, I couldn't generate a response."
+            reply = "Sorry, I couldn't generate a response."
+
+        # Append current turn to chat history for next turn
+        st.session_state.hf_chat_history.append(user_input)
+        st.session_state.hf_chat_history.append(reply)
+
+        return reply
+
     except Exception as e:
         return f"Error generating response: {e}"
 
-# Styles + hero (unchanged)
+# --- UI ---
+
+# Styles + hero
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap');
@@ -206,6 +185,7 @@ cost_model = load_model('ev_cost_model.pkl')
 health_model = load_model('ev_health_model.pkl')
 st.success("✅ ML models loaded.")
 
+# Load dataset (sample or uploaded)
 if not os.path.exists(DATA_FILE):
     st.warning("Sample dataset not found! Please upload your CSV file below.")
     df = None
@@ -263,7 +243,6 @@ plot_degradation(df)
 st.markdown("---")
 st.subheader("🤖 Interactive AI Battery Assistant")
 
-# initialize chat history in session
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = [
         {"role": "assistant", "content": "Hello! I’m here to help with your EV battery queries."}

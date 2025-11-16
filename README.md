@@ -117,38 +117,53 @@ streamlit run app/dashboard.py
 EV Insight — driving smarter, cleaner, and longer EV journeys through battery intelligence.
 
 
-🌐 Live DemoAccess the EV Insight dashboard instantly in your browser:▶ Launch on Streamlit CloudNo install or setup required—just click and explore battery insights, predictions, and the AI assistant interface.⚙️ Full Build & Run AutomationFor reproducible local setup and deployment, use the following build/run task in VS Code or Codespaces.
-Add this to your .vscode/tasks.json to automate every step, or use these commands manually:python3 -m venv venv
-source venv/bin/activate        # On Linux/Mac 
-# venvScriptsactivate         # On Windows
-git pull --rebase origin main
+## 🌐 Live Demo
+
+Access the EV Insight dashboard instantly in your browser:  
+**[▶ Launch on Streamlit Cloud](https://pgdc-ev.streamlit.app/)**
+
+No install or setup required—just click and explore battery insights, predictions, and the AI assistant interface.
+
+---
+
+## ⚙️ Full Build & Run Automation
+
+For reproducible local setup and deployment, use the following build/run task in VS Code or Codespaces.  
+Add this to your `.vscode/tasks.json` to automate every step, or use these commands manually:
+
+
+```
+python3 -m venv venv
+source venv/bin/activate        # On Linux/Macvenv\Scripts\activate         # On Windowsgit pull --rebase origin main
 pip cache purge
 python -m pip install --upgrade pip && pip install --upgrade -r installed.txt
 python train_life_model.py
 python train_cost_model.py
 python train_health_model.py
-streamlit run app.pyFor VS Code build task, use:{
-  "version": "2.0.0",
-  "tasks": [
-    {
-      "label": "Full Project Build and Run",
-      "type": "shell",
-      "command": "python3 -m venv venv && source venv/bin/activate && git pull --rebase origin main && pip cache purge && python -m pip install --upgrade pip && pip install --upgrade -r installed.txt && python train_life_model.py && python train_cost_model.py && python train_health_model.py && streamlit run app.py",
-      "group": {
-        "kind": "build",
-        "isDefault": true
-      },
-      "presentation": {
-        "echo": true,
-        "reveal": "always"
-      }
-    }
-  ]
-}EV Insight is now globally accessible and easy to launch—whether on Streamlit Cloud, Codespaces, or locally.
-For more details, visit https://pgdc-ev.streamlit.app/ and enjoy powerful EV battery analytics at your fingertips
+streamlit run app.py
 
+For VS Code build task, use:
+{
+"version": "2.0.0",
+"tasks": [
+{
+"label": "Full Project Build and Run",
+"type": "shell",
+"command": "python3 -m venv venv && source venv/bin/activate && git pull --rebase origin main && pip cache purge && python -m pip install --upgrade pip && pip install --upgrade -r installed.txt && python train_life_model.py && python train_cost_model.py && python train_health_model.py && streamlit run app.py",
+"group": {
+"kind": "build",
+"isDefault": true
+},
+"presentation": {
+"echo": true,
+"reveal": "always"
+}
+}
+]
+}
+```
+---
 
-
-
-
+EV Insight is now globally accessible and easy to launch—whether on Streamlit Cloud, Codespaces, or locally.  
+For more details, visit [https://pgdc-ev.streamlit.app/](https://pgdc-ev.streamlit.app/) and enjoy powerful EV battery analytics at your fingertips.
 

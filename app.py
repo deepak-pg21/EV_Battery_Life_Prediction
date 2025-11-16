@@ -8,6 +8,8 @@ import os
 import streamlit as st
 import pandas as pd
 import joblib
+import matplotlib
+matplotlib.rcParams['font.family'] = 'Symbola'  # <-- Enable emoji in matplotlib titles/labels
 import matplotlib.pyplot as plt
 from datetime import datetime
 from transformers import pipeline
@@ -46,7 +48,7 @@ def plot_degradation(df):
         df['predicted_cycles'] = preds
         fig, ax = plt.subplots(figsize=(10, 4))
         ax.plot(df.index, df['predicted_cycles'], color='#16a34a', linewidth=2)
-        ax.set_title("🔋 Predicted Battery Cycle Degradation")
+        ax.set_title("🔋 Predicted Battery Cycle Degradation")  # Emoji in title!
         ax.set_xlabel("Sample Index")
         ax.set_ylabel("Remaining Cycles")
         ax.grid(True)
@@ -66,12 +68,10 @@ def load_chatbot():
 hf_chatbot = load_chatbot()
 
 def hf_chat_response(user_input):
-    """Dialog model with robust error handling and response cleaning."""
     try:
         outputs = hf_chatbot(user_input, max_length=1000, num_return_sequences=1, truncation=True)
         if outputs and len(outputs) > 0:
             generated_text = outputs[0].get('generated_text', '').strip()
-            # Clean prefix if DialoGPT echoes input
             if generated_text.lower().startswith(user_input.lower()):
                 response = generated_text[len(user_input):].strip()
             else:
@@ -84,7 +84,6 @@ def hf_chat_response(user_input):
     except Exception as e:
         return f"Error: {e}"
 
-# Embedded style for modern chat bubbles and app
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap');

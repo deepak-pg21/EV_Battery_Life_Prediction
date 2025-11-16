@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 EV Insight: Beautiful, Inspiring Battery Health & AI Chatbot Streamlit App
-Author: PG Deepak Chiranjeevi (2025) — corrected chatbot flow with working conversational pipeline
+Author: PG Deepak Chiranjeevi (2025) — chatbot fixed to use text-generation pipeline
 """
 
 import os
@@ -59,13 +59,12 @@ def plot_degradation(df):
     except Exception as e:
         st.error(f"Plot error: {e}")
 
-# Chatbot - Load conversational pipeline for multi-turn chat
 @st.cache_resource(show_spinner=False)
 def load_chatbot_model():
     model_name = "microsoft/DialoGPT-medium"
     try:
-        conv_pipe = pipeline("conversational", model=model_name)
-        return conv_pipe
+        gen_pipe = pipeline("text-generation", model=model_name, pad_token_id=50256)
+        return gen_pipe
     except Exception as e:
         st.error(f"Failed to load chatbot pipeline: {e}")
         st.stop()
@@ -74,36 +73,24 @@ chatbot_pipe = load_chatbot_model()
 
 def hf_chat_response(user_input):
     try:
-        if "hf_chat_history" not in st.session_state:
-            st.session_state.hf_chat_history = []
-
-        # Build conversation string from history plus current user input
-        conversation_text = " ".join(st.session_state.hf_chat_history + [user_input])
-
-        # Generate response using conversational pipeline
-        outputs = chatbot_pipe(conversation_text)
+        outputs = chatbot_pipe(user_input, max_length=200, num_return_sequences=1, truncation=True)
         if outputs and len(outputs) > 0:
-            reply = outputs[0].get('generated_text', '').strip()
-            # Clean reply by removing repeated conversation_text prefix if present
-            if reply.lower().startswith(conversation_text.lower()):
-                reply = reply[len(conversation_text):].strip()
-            if not reply:
-                reply = "Sorry, I couldn't generate a response."
+            generated_text = outputs[0].get('generated_text') or outputs[0].get('text') or str(outputs[0])
+            generated_text = generated_text.strip()
+            if generated_text.lower().startswith(user_input.lower()):
+                response = generated_text[len(user_input):].strip()
+            else:
+                response = generated_text
+            if not response:
+                response = "Sorry, I couldn't generate a response."
+            return response
         else:
-            reply = "Sorry, I couldn't generate a response."
-
-        # Append current turn to chat history for next turn
-        st.session_state.hf_chat_history.append(user_input)
-        st.session_state.hf_chat_history.append(reply)
-
-        return reply
-
+            return "Sorry, I couldn't generate a response."
     except Exception as e:
         return f"Error generating response: {e}"
 
 # --- UI ---
 
-# Styles + hero
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap');
@@ -179,13 +166,11 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# Load ML models
 life_model = load_model('ev_life_model.pkl')
 cost_model = load_model('ev_cost_model.pkl')
 health_model = load_model('ev_health_model.pkl')
 st.success("✅ ML models loaded.")
 
-# Load dataset (sample or uploaded)
 if not os.path.exists(DATA_FILE):
     st.warning("Sample dataset not found! Please upload your CSV file below.")
     df = None
@@ -239,7 +224,7 @@ st.markdown("---")
 st.subheader("📈 Battery Cycle Degradation Across Dataset")
 plot_degradation(df)
 
-# --- Chatbot Section ---
+# Chatbot Section
 st.markdown("---")
 st.subheader("🤖 Interactive AI Battery Assistant")
 
@@ -257,7 +242,6 @@ def display_chat():
 
 display_chat()
 
-# Ensure chat_input key exists so we can clear it programmatically
 if "chat_input" not in st.session_state:
     st.session_state.chat_input = ""
 
@@ -270,21 +254,13 @@ with st.form(key="chat_form", clear_on_submit=False):
     submitted = st.form_submit_button("Send")
 
 if submitted and st.session_state.chat_input and st.session_state.chat_input.strip():
-    # append user message immediately so UI shows it while generating
     user_text = st.session_state.chat_input.strip()
     st.session_state.chat_history.append({"role": "user", "content": user_text})
 
-    # generate assistant response
     with st.spinner("AI is thinking..."):
         answer = hf_chat_response(user_text)
 
-    # append assistant reply
     st.session_state.chat_history.append({"role": "assistant", "content": answer})
 
-    # clear input so it's ready for the next message
     st.session_state.chat_input = ""
-
-    # rerun so the new messages show (Streamlit re-renders with updated session state)
     st.experimental_rerun()
-
-# End of file

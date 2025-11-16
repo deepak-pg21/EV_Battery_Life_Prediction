@@ -92,5 +92,5 @@ print(f"✅ Battery Cost Model saved to {model_path}")
 # -----------------------------------------------------------
 # Final Summary
 # -----------------------------------------------------------
-print("
-🎯 Battery Cost model created and stored successfully.")
+print("🎯 Battery Cost model created and stored successfully.")
+

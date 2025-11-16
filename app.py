@@ -10,7 +10,7 @@ import pandas as pd
 import joblib
 import matplotlib.pyplot as plt
 from datetime import datetime
-from transformers import pipeline, Conversation
+from transformers import pipeline
 
 # Page config
 st.set_page_config(page_title="EV Insight ⚡ Battery & AI Assistant", page_icon="🔋", layout="wide", initial_sidebar_state="expanded")
@@ -62,9 +62,15 @@ def load_chatbot():
 hf_chatbot = load_chatbot()
 
 def hf_chat_response(user_input):
-    conversation = Conversation(user_input)
-    response = hf_chatbot(conversation)
-    return response.generated_responses[-1]
+    response = hf_chatbot(user_input)
+    if response and len(response) > 0:
+        # Depending on transformers version, access response text safely
+        # Try extracting generated_responses list, fallback to string conversion
+        if 'generated_responses' in response[0]:
+            return response[0]['generated_responses'][-1]
+        return str(response[0])
+    else:
+        return "Sorry, I couldn't generate a response."
 
 # Hero banner
 st.markdown("""

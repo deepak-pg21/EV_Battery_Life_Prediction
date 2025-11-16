@@ -243,21 +243,20 @@ def display_chat():
 
 display_chat()
 
-user_input = st.text_input(
-    "Ask anything about EV battery life, cost, or health:",
-    key="chat_input",
-    placeholder="Type your question and press Enter"
-)
+with st.form(key="chat_form"):
+    user_input = st.text_input(
+        "Ask anything about EV battery life, cost, or health:",
+        key="chat_input",
+        placeholder="Type your question and press Enter"
+    )
+    submitted = st.form_submit_button("Send")
 
-if user_input:
+if submitted and user_input:
     st.session_state.chat_history.append({"role": "user", "content": user_input})
     with st.spinner("AI is thinking..."):
         answer = hf_chat_response(user_input)
     st.session_state.chat_history.append({"role": "assistant", "content": answer})
-    try:
-        st.experimental_rerun()
-    except Exception:
-        pass
+    st.experimental_rerun()
 
 st.markdown("---")
 st.markdown(

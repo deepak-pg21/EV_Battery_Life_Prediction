@@ -55,23 +55,24 @@ def plot_degradation(df):
     except Exception as e:
         st.error(f"Plot error: {e}")
 
+
 @st.cache_resource(show_spinner=False)
 def load_chatbot():
-    return pipeline("conversational", model="microsoft/DialoGPT-medium")
+    return pipeline("text-generation", model="microsoft/DialoGPT-medium", pad_token_id=50256, max_length=1000)
 
 hf_chatbot = load_chatbot()
 
 def hf_chat_response(user_input):
-    response = hf_chatbot(user_input)
-    if response and len(response) > 0:
-        # Depending on transformers version, access response text safely
-        # Try extracting generated_responses list, fallback to string conversion
-        if 'generated_responses' in response[0]:
-            return response[0]['generated_responses'][-1]
-        return str(response[0])
+    outputs = hf_chatbot(user_input, max_length=1000, num_return_sequences=1)
+    if outputs and len(outputs) > 0:
+        # outputs is list of dicts with 'generated_text'
+        generated_text = outputs[0]['generated_text']
+        # Optionally remove input context from output
+        response = generated_text[len(user_input):].strip()
+        return response
     else:
         return "Sorry, I couldn't generate a response."
-
+        
 # Hero banner
 st.markdown("""
 <style>
@@ -244,3 +245,4 @@ if user_input:
 
 st.markdown("---")
 st.markdown(f'<p style="text-align:center; color:#94a3b8; font-size:0.9em;">© {datetime.now().year} EV Insight by PG Deepak Chiranjeevi</p>', unsafe_allow_html=True)
+

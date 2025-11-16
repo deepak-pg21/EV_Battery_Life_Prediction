@@ -229,10 +229,31 @@ plot_degradation(df)
 st.markdown("---")
 st.subheader("🤖 Interactive AI Battery Assistant")
 
+from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+
+# Load the conversational AI model once
+if "chatbot_pipeline" not in st.session_state:
+    tokenizer = AutoTokenizer.from_pretrained("microsoft/DialoGPT-large")
+    model = AutoModelForCausalLM.from_pretrained("microsoft/DialoGPT-large")
+    st.session_state.chatbot_pipeline = pipeline("text-generation", model=model, tokenizer=tokenizer)
+
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = [
-        {"role":"assistant","content":"Hello! I’m here to help with your EV battery queries."}
+        {"role": "assistant", "content": "Hello! I’m here to help with your EV battery queries."}
     ]
+
+def hf_chat_response(user_input):
+    chatbot = st.session_state.chatbot_pipeline
+    response = chatbot(user_input, max_length=128, do_sample=True, pad_token_id=chatbot.tokenizer.eos_token_id)
+    if response and len(response) > 0:
+        generated_text = response[0]['generated_text'].strip()
+        # Avoid echo
+        if generated_text.lower().startswith(user_input.lower()):
+            return generated_text[len(user_input):].strip()
+        else:
+            return generated_text
+    else:
+        return "Sorry, I couldn't generate a response."
 
 def display_chat():
     st.markdown('<div class="chat-container">', unsafe_allow_html=True)
@@ -243,24 +264,24 @@ def display_chat():
 
 display_chat()
 
-with st.form(key="chat_form"):
-    user_input = st.text_input(
-        "Ask anything about EV battery life, cost, or health:",
-        key="chat_input",
-        placeholder="Type your question and press Enter"
-    )
-    submitted = st.form_submit_button("Send")
+user_input = st.text_input(
+    "Ask anything about EV battery life, cost, or health:",
+    key="chat_input",
+    placeholder="Type your question and press Enter"
+)
 
-if submitted and user_input:
+if user_input:
     st.session_state.chat_history.append({"role": "user", "content": user_input})
     with st.spinner("AI is thinking..."):
         answer = hf_chat_response(user_input)
     st.session_state.chat_history.append({"role": "assistant", "content": answer})
-    
+    try:
+        st.experimental_rerun()
+    except Exception:
+        pass
 
 st.markdown("---")
 st.markdown(
     f'<p style="text-align:center; color:#94a3b8; font-size:0.9em;">© {datetime.now().year} EV Insight by PG Deepak Chiranjeevi</p>',
     unsafe_allow_html=True
 )
-

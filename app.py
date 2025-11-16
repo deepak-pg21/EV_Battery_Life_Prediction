@@ -25,7 +25,6 @@ FEATURE_COLS = [
     'mileage_km', 'age_months'
 ]
 
-# Utility functions
 def load_model(fname):
     path = os.path.join(MODEL_DIR, fname)
     if not os.path.exists(path):
@@ -57,24 +56,38 @@ def plot_degradation(df):
 
 @st.cache_resource(show_spinner=False)
 def load_chatbot():
-    return pipeline("text-generation", model="microsoft/DialoGPT-medium", pad_token_id=50256, max_length=1000)
+    return pipeline(
+        "text-generation",
+        model="microsoft/DialoGPT-medium",
+        pad_token_id=50256,
+        max_length=1000
+    )
 
 hf_chatbot = load_chatbot()
 
 def hf_chat_response(user_input):
-    outputs = hf_chatbot(user_input, max_length=1000, num_return_sequences=1)
-    if outputs and len(outputs) > 0:
-        generated_text = outputs[0]['generated_text']
-        response = generated_text[len(user_input):].strip()
-        return response
-    else:
-        return "Sorry, I couldn't generate a response."
-        
-# Hero banner and style
+    """Dialog model with robust error handling and response cleaning."""
+    try:
+        outputs = hf_chatbot(user_input, max_length=1000, num_return_sequences=1, truncation=True)
+        if outputs and len(outputs) > 0:
+            generated_text = outputs[0].get('generated_text', '').strip()
+            # Clean prefix if DialoGPT echoes input
+            if generated_text.lower().startswith(user_input.lower()):
+                response = generated_text[len(user_input):].strip()
+            else:
+                response = generated_text
+            if not response:
+                response = "Sorry, I couldn't generate a response."
+            return response
+        else:
+            return "Sorry, I couldn't generate a response."
+    except Exception as e:
+        return f"Error: {e}"
+
+# Embedded style for modern chat bubbles and app
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap');
-
 .hero {
   font-family: 'Montserrat', sans-serif;
   color: #065f46;
@@ -136,6 +149,7 @@ st.markdown("""
   max-width: 80%;
   align-self: flex-start;
   color: #334e3e;
+  font-weight: 500;
 }
 
 .chat-input {
@@ -147,7 +161,6 @@ st.markdown("""
 }
 
 </style>
-
 <div class="hero">
   <h1>🔋 EV Insight — Your Electric Vehicle Battery Companion</h1>
   <div class="tagline">Predict life, cost, health and chat with your AI Battery Expert</div>
@@ -223,29 +236,32 @@ if "chat_history" not in st.session_state:
     ]
 
 def display_chat():
-    st.markdown('<div class="chat-container" style="display: flex; flex-direction: column;">', unsafe_allow_html=True)
+    st.markdown('<div class="chat-container">', unsafe_allow_html=True)
     for message in st.session_state.chat_history:
-        if message["role"] == "user":
-            st.markdown(f'<div class="user-msg">{message["content"]}</div>', unsafe_allow_html=True)
-        else:
-            st.markdown(f'<div class="bot-msg">{message["content"]}</div>', unsafe_allow_html=True)
+        style = "user-msg" if message["role"] == "user" else "bot-msg"
+        st.markdown(f'<div class="{style}">{message["content"]}</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
 display_chat()
 
-user_input = st.text_input("Ask anything about EV battery life, cost, or health:", key="chat_input", placeholder="Type your question and press Enter")
+user_input = st.text_input(
+    "Ask anything about EV battery life, cost, or health:",
+    key="chat_input",
+    placeholder="Type your question and press Enter"
+)
 
 if user_input:
-    st.session_state.chat_history.append({"role":"user", "content": user_input})
+    st.session_state.chat_history.append({"role": "user", "content": user_input})
     with st.spinner("AI is thinking..."):
         answer = hf_chat_response(user_input)
-    st.session_state.chat_history.append({"role":"assistant", "content": answer})
-    # Instead of deprecated experimental_rerun, use st.experimental_rerun if available 
+    st.session_state.chat_history.append({"role": "assistant", "content": answer})
     try:
         st.experimental_rerun()
-    except AttributeError:
-        # alternative: rerun automatically by setting a session state flag or just do nothing here
+    except Exception:
         pass
 
 st.markdown("---")
-st.markdown(f'<p style="text-align:center; color:#94a3b8; font-size:0.9em;">© {datetime.now().year} EV Insight by PG Deepak Chiranjeevi</p>', unsafe_allow_html=True)
+st.markdown(
+    f'<p style="text-align:center; color:#94a3b8; font-size:0.9em;">© {datetime.now().year} EV Insight by PG Deepak Chiranjeevi</p>',
+    unsafe_allow_html=True
+)

@@ -1,0 +1,18 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Full Project Build and Run",
+      "type": "shell",
+      "command": "python3 -m venv venv && source venv/bin/activate && git pull --rebase origin main && pip cache purge && python -m pip install --upgrade pip && pip install --upgrade -r installed.txt && python train_life_model.py && python train_cost_model.py && python train_health_model.py && streamlit run app.py",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always"
+      }
+    }
+  ]
+}

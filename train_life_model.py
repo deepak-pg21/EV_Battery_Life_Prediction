@@ -93,5 +93,5 @@ print(f"✅ Battery Life Model saved to {model_path}")
 # -----------------------------------------------------------
 # Final Summary
 # -----------------------------------------------------------
-print("
-🎯 Battery Life model created and stored successfully.")
+print("🎯 Battery Life model created and stored successfully.")
+

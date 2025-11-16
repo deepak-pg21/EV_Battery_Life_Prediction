@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 EV Insight: Beautiful, Inspiring Battery Health & AI Chatbot Streamlit App
-Author: PG Deepak Chiranjeevi (2025) — chatbot fixed to use text-generation pipeline
+Author: PG Deepak Chiranjeevi (2025)
 """
 
 import os
@@ -9,10 +9,12 @@ import streamlit as st
 import pandas as pd
 import joblib
 import matplotlib
-matplotlib.rcParams['font.family'] = 'Symbola'
+matplotlib.rcParams['font.family'] = 'Symbola'  # <-- Enable emoji in matplotlib titles/labels
 import matplotlib.pyplot as plt
+from datetime import datetime
 from transformers import pipeline
 
+# Page config
 st.set_page_config(page_title="EV Insight ⚡ Battery & AI Assistant", page_icon="🔋", layout="wide", initial_sidebar_state="expanded")
 
 MODEL_DIR = os.path.join(os.getcwd(), 'model')
@@ -30,28 +32,23 @@ def load_model(fname):
     if not os.path.exists(path):
         st.error(f"❌ Model missing: {fname}. Please train and save in /model/")
         st.stop()
-    try:
-        return joblib.load(path)
-    except Exception as e:
-        st.error(f"Failed to load model {fname}: {e}")
-        st.stop()
+    return joblib.load(path)
 
 def predict_all(row):
     X = row[FEATURE_COLS]
-    cycles = float(life_model.predict(X)[0])
-    cost = float(cost_model.predict(X)[0])
+    cycles = life_model.predict(X)[0]
+    cost = cost_model.predict(X)[0]
     health_input = pd.DataFrame([{"predicted_cycles": cycles, "predicted_cost": cost, "state_of_health": row["state_of_health"].values[0]}])
-    health = float(health_model.predict(health_input)[0])
+    health = health_model.predict(health_input)[0]
     return cycles, cost, health
 
 def plot_degradation(df):
     try:
         preds = life_model.predict(df[FEATURE_COLS])
-        df = df.copy()
         df['predicted_cycles'] = preds
         fig, ax = plt.subplots(figsize=(10, 4))
-        ax.plot(df.index, df['predicted_cycles'], linewidth=2)
-        ax.set_title("🔋 Predicted Battery Cycle Degradation")
+        ax.plot(df.index, df['predicted_cycles'], color='#16a34a', linewidth=2)
+        ax.set_title("🔋 Predicted Battery Cycle Degradation")  # Emoji in title!
         ax.set_xlabel("Sample Index")
         ax.set_ylabel("Remaining Cycles")
         ax.grid(True)
@@ -60,23 +57,21 @@ def plot_degradation(df):
         st.error(f"Plot error: {e}")
 
 @st.cache_resource(show_spinner=False)
-def load_chatbot_model():
-    model_name = "microsoft/DialoGPT-medium"
-    try:
-        gen_pipe = pipeline("text-generation", model=model_name, pad_token_id=50256)
-        return gen_pipe
-    except Exception as e:
-        st.error(f"Failed to load chatbot pipeline: {e}")
-        st.stop()
+def load_chatbot():
+    return pipeline(
+        "text-generation",
+        model="microsoft/DialoGPT-medium",
+        pad_token_id=50256,
+        max_length=1000
+    )
 
-chatbot_pipe = load_chatbot_model()
+hf_chatbot = load_chatbot()
 
 def hf_chat_response(user_input):
     try:
-        outputs = chatbot_pipe(user_input, max_length=200, num_return_sequences=1, truncation=True)
+        outputs = hf_chatbot(user_input, max_length=1000, num_return_sequences=1, truncation=True)
         if outputs and len(outputs) > 0:
-            generated_text = outputs[0].get('generated_text') or outputs[0].get('text') or str(outputs[0])
-            generated_text = generated_text.strip()
+            generated_text = outputs[0].get('generated_text', '').strip()
             if generated_text.lower().startswith(user_input.lower()):
                 response = generated_text[len(user_input):].strip()
             else:
@@ -87,9 +82,7 @@ def hf_chat_response(user_input):
         else:
             return "Sorry, I couldn't generate a response."
     except Exception as e:
-        return f"Error generating response: {e}"
-
-# --- UI ---
+        return f"Error: {e}"
 
 st.markdown("""
 <style>
@@ -104,6 +97,7 @@ st.markdown("""
   box-shadow: 0 8px 24px rgba(6, 95, 70, 0.15);
   margin-bottom: 2rem;
 }
+
 .tagline {
   font-size: 1.3rem;
   font-weight: 500;
@@ -111,6 +105,7 @@ st.markdown("""
   color: #2d6a4f;
   font-style: italic;
 }
+
 .metrics-wrapper .stMetric {
   background: #bbf7d0;
   border-radius: 15px;
@@ -122,6 +117,7 @@ st.markdown("""
   color: #065f46;
   margin-bottom: 15px;
 }
+
 .chat-container {
   background: #ecfdf5;
   border-radius: 12px;
@@ -132,6 +128,7 @@ st.markdown("""
   display: flex;
   flex-direction: column;
 }
+
 .user-msg {
   background-color: #bbf7d0;
   border-radius: 20px 20px 0 20px;
@@ -142,6 +139,7 @@ st.markdown("""
   color: #065f46;
   font-weight: 600;
 }
+
 .bot-msg {
   background-color: white;
   border-radius: 20px 20px 20px 0;
@@ -152,6 +150,7 @@ st.markdown("""
   color: #334e3e;
   font-weight: 500;
 }
+
 .chat-input {
   padding: 0.5rem 1rem;
   width: 100%;
@@ -159,6 +158,7 @@ st.markdown("""
   border: 2px solid #16a34a;
   font-size: 1.1rem;
 }
+
 </style>
 <div class="hero">
   <h1>🔋 EV Insight — Your Electric Vehicle Battery Companion</h1>
@@ -166,21 +166,19 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
+# Load ML models
 life_model = load_model('ev_life_model.pkl')
 cost_model = load_model('ev_cost_model.pkl')
 health_model = load_model('ev_health_model.pkl')
 st.success("✅ ML models loaded.")
 
+# Load or upload dataset
 if not os.path.exists(DATA_FILE):
     st.warning("Sample dataset not found! Please upload your CSV file below.")
     df = None
 else:
-    try:
-        df = pd.read_csv(DATA_FILE)
-        st.info(f"Sample dataset loaded: {df.shape[0]} rows")
-    except Exception as e:
-        st.error(f"Failed to read sample dataset: {e}")
-        df = None
+    df = pd.read_csv(DATA_FILE)
+    st.info(f"Sample dataset loaded: {df.shape[0]} rows")
 
 uploaded = st.file_uploader("Upload EV dataset (.csv)", type="csv")
 if uploaded:
@@ -193,9 +191,11 @@ if uploaded:
 if df is None:
     st.stop()
 
+# Dataset preview
 st.subheader("🗂️ Dataset Preview")
 st.dataframe(df.head(8))
 
+# Selection & Predictions
 st.markdown("---")
 st.subheader("🔍 Select a data row to predict")
 
@@ -217,6 +217,7 @@ try:
     col1.metric("🔋 Remaining Charge Cycles", f"{cycles:.0f} cycles")
     col2.metric("💰 Estimated Replacement Cost", f"${cost:,.2f}")
     col3.metric("❤️ Battery Health Index", f"{health:.1f}%")
+
 except Exception as e:
     st.error(f"Prediction failed: {e}")
 
@@ -224,94 +225,42 @@ st.markdown("---")
 st.subheader("📈 Battery Cycle Degradation Across Dataset")
 plot_degradation(df)
 
-# ============================
-# ---- ChatterBot Setup ------
-# ============================
-
-from chatterbot import ChatBot
-from chatterbot.trainers import ChatterBotCorpusTrainer
-
-# Create chatbot instance (stored locally)
-battery_bot = ChatBot(
-    "EVBatteryBot",
-    storage_adapter="chatterbot.storage.SQLStorageAdapter",
-    logic_adapters=[
-        {
-            "import_path": "chatterbot.logic.BestMatch",
-            "default_response": "I’m not sure about that. Can you ask differently?",
-            "maximum_similarity_threshold": 0.70
-        }
-    ],
-    database_uri="sqlite:///evbatterydb.sqlite3"
-)
-
-# Train bot with English corpus + custom EV data
-trainer = ChatterBotCorpusTrainer(battery_bot)
-trainer.train("chatterbot.corpus.english")
-
-# Optional: add EV-specific knowledge
-custom_data = [
-    "What affects EV battery life?",
-    "Battery life depends on temperature, charging habits, and load.",
-    "How long does an EV battery last?",
-    "Most EV batteries last 8–12 years depending on usage.",
-    "Does fast charging reduce battery health?",
-    "Yes, frequent fast charging increases heat and speeds up degradation.",
-    "How do you increase EV battery life?",
-    "Avoid high temperatures, keep battery between 20–80%, and avoid fast charging daily."
-]
-
-from chatterbot.trainers import ListTrainer
-list_trainer = ListTrainer(battery_bot)
-list_trainer.train(custom_data)
-
-
-def get_chatbot_response(user_query):
-    """Return free chatterbot response."""
-    try:
-        reply = battery_bot.get_response(user_query)
-        return str(reply)
-    except Exception as e:
-        return f"⚠️ Chatbot Error: {str(e)}"
-
-
-# ============================
-# ---- Chatbot UI Section ----
-# ============================
-
+# Chatbot Section
 st.markdown("---")
-st.subheader("🤖 Interactive AI Battery Assistant (FREE ChatterBot)")
+st.subheader("🤖 Interactive AI Battery Assistant")
 
-# Maintain chat history
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = [
-        {"role": "assistant", "content": "Hello! Ask me anything about EV batteries."}
+        {"role":"assistant","content":"Hello! I’m here to help with your EV battery queries."}
     ]
 
-# Display previous messages
-for msg in st.session_state.chat_history:
-    if msg["role"] == "assistant":
-        st.info(f"**Assistant:** {msg['content']}")
-    else:
-        st.success(f"**You:** {msg['content']}")
+def display_chat():
+    st.markdown('<div class="chat-container">', unsafe_allow_html=True)
+    for message in st.session_state.chat_history:
+        style = "user-msg" if message["role"] == "user" else "bot-msg"
+        st.markdown(f'<div class="{style}">{message["content"]}</div>', unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# Chat input
-with st.form(key="chat_form", clear_on_submit=False):
-    user_input = st.text_input(
-        "Ask anything about EV battery life, cost, or health:",
-        key="chat_input",
-        placeholder="Type your question and press Enter"
-    )
-    submitted = st.form_submit_button("Send")
+display_chat()
 
-# Process user message
-if submitted and st.session_state.chat_input and st.session_state.chat_input.strip():
-    user_msg = st.session_state.chat_input.strip()
-    st.session_state.chat_history.append({"role": "user", "content": user_msg})
+user_input = st.text_input(
+    "Ask anything about EV battery life, cost, or health:",
+    key="chat_input",
+    placeholder="Type your question and press Enter"
+)
 
-    with st.spinner("Bot is thinking..."):
-        bot_reply = get_chatbot_response(user_msg)
+if user_input:
+    st.session_state.chat_history.append({"role": "user", "content": user_input})
+    with st.spinner("AI is thinking..."):
+        answer = hf_chat_response(user_input)
+    st.session_state.chat_history.append({"role": "assistant", "content": answer})
+    try:
+        st.experimental_rerun()
+    except Exception:
+        pass
 
-    st.session_state.chat_history.append({"role": "assistant", "content": bot_reply})
-    st.session_state.chat_input = ""
-    st.experimental_rerun()
+st.markdown("---")
+st.markdown(
+    f'<p style="text-align:center; color:#94a3b8; font-size:0.9em;">© {datetime.now().year} EV Insight by PG Deepak Chiranjeevi</p>',
+    unsafe_allow_html=True
+)

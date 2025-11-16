@@ -55,7 +55,6 @@ def plot_degradation(df):
     except Exception as e:
         st.error(f"Plot error: {e}")
 
-
 @st.cache_resource(show_spinner=False)
 def load_chatbot():
     return pipeline("text-generation", model="microsoft/DialoGPT-medium", pad_token_id=50256, max_length=1000)
@@ -65,15 +64,13 @@ hf_chatbot = load_chatbot()
 def hf_chat_response(user_input):
     outputs = hf_chatbot(user_input, max_length=1000, num_return_sequences=1)
     if outputs and len(outputs) > 0:
-        # outputs is list of dicts with 'generated_text'
         generated_text = outputs[0]['generated_text']
-        # Optionally remove input context from output
         response = generated_text[len(user_input):].strip()
         return response
     else:
         return "Sorry, I couldn't generate a response."
         
-# Hero banner
+# Hero banner and style
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap');
@@ -116,6 +113,8 @@ st.markdown("""
   box-shadow: 1px 1px 15px #94d3ac80;
   max-height: 400px;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .user-msg {
@@ -227,7 +226,7 @@ def display_chat():
     st.markdown('<div class="chat-container" style="display: flex; flex-direction: column;">', unsafe_allow_html=True)
     for message in st.session_state.chat_history:
         if message["role"] == "user":
-            st.markdown(f'<div class="user-msg" style="align-self: flex-end;">{message["content"]}</div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="user-msg">{message["content"]}</div>', unsafe_allow_html=True)
         else:
             st.markdown(f'<div class="bot-msg">{message["content"]}</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
@@ -241,8 +240,12 @@ if user_input:
     with st.spinner("AI is thinking..."):
         answer = hf_chat_response(user_input)
     st.session_state.chat_history.append({"role":"assistant", "content": answer})
-    st.experimental_rerun()
+    # Instead of deprecated experimental_rerun, use st.experimental_rerun if available 
+    try:
+        st.experimental_rerun()
+    except AttributeError:
+        # alternative: rerun automatically by setting a session state flag or just do nothing here
+        pass
 
 st.markdown("---")
 st.markdown(f'<p style="text-align:center; color:#94a3b8; font-size:0.9em;">© {datetime.now().year} EV Insight by PG Deepak Chiranjeevi</p>', unsafe_allow_html=True)
-

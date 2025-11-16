@@ -225,35 +225,28 @@ st.markdown("---")
 st.subheader("📈 Battery Cycle Degradation Across Dataset")
 plot_degradation(df)
 
+
 # Chatbot Section
 st.markdown("---")
 st.subheader("🤖 Interactive AI Battery Assistant")
 
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+from transformers import pipeline
 
-# Load the conversational AI model once
-if "chatbot_pipeline" not in st.session_state:
-    tokenizer = AutoTokenizer.from_pretrained("microsoft/DialoGPT-large")
-    model = AutoModelForCausalLM.from_pretrained("microsoft/DialoGPT-large")
-    st.session_state.chatbot_pipeline = pipeline("text-generation", model=model, tokenizer=tokenizer)
+EV_CONTEXT = """
+Most EV batteries last 8-10 years. Battery replacement cost ranges from $3,000 to $8,000, varying by model and manufacturer. Tesla Model 3 batteries typically last over 300,000 miles (482,000 km). Newer chemistries such as LFP and NCA improve cycle life and durability.
+"""
 
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = [
         {"role": "assistant", "content": "Hello! I’m here to help with your EV battery queries."}
     ]
+if "qa_pipeline" not in st.session_state:
+    st.session_state.qa_pipeline = pipeline("question-answering", model="deepset/roberta-base-squad2")
 
 def hf_chat_response(user_input):
-    chatbot = st.session_state.chatbot_pipeline
-    response = chatbot(user_input, max_length=128, do_sample=True, pad_token_id=chatbot.tokenizer.eos_token_id)
-    if response and len(response) > 0:
-        generated_text = response[0]['generated_text'].strip()
-        # Avoid echo
-        if generated_text.lower().startswith(user_input.lower()):
-            return generated_text[len(user_input):].strip()
-        else:
-            return generated_text
-    else:
-        return "Sorry, I couldn't generate a response."
+    qa = st.session_state.qa_pipeline
+    result = qa(question=user_input, context=EV_CONTEXT)
+    return result['answer'] if 'answer' in result and result['answer'].strip() else "Sorry, I don't have that information."
 
 def display_chat():
     st.markdown('<div class="chat-container">', unsafe_allow_html=True)

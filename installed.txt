@@ -1,6 +1,6 @@
+joblib
 streamlit
 pandas
-joblib
 matplotlib
 scikit-learn
 transformers
